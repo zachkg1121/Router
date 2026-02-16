@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Price Chopper Truck Router</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, sans-serif;
+            background: #1a1a1a;
+            color: #fff;
+            padding: 15px;
+            font-size: 16px;
+        }
+        h1 {
+            color: #ff6b35;
+            font-size: 24px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        .card {
+            background: #2a2a2a;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 15px;
+        }
+        .card-title {
+            color: #f7b801;
+            font-weight: bold;
+            margin-bottom: 15px;
+            font-size: 14px;
+            text-transform: uppercase;
+        }
+        input {
+            width: 100%;
+            padding: 14px;
+            background: #333;
+            border: 2px solid #555;
+            border-radius: 8px;
+            color: #fff;
+            margin-bottom: 12px;
+            font-size: 16px;
+        }
+        input:focus {
+            outline: none;
+            border-color: #ff6b35;
+        }
+        .code-inputs {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+        .code-input {
+            text-align: center;
+            font-size: 20px;
+            font-weight: bold;
+        }
+        button {
+            width: 100%;
+            padding: 16px;
+            background: #ff6b35;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        button.secondary { background: #555; }
+        .status {
+            text-align: center;
+            padding: 12px;
+            background: #333;
+            border-radius: 8px;
+            margin: 10px 0;
+            font-size: 14px;
+            display: none;
+        }
+        .status.loading { color: #f7b801; }
+        .status.success { color: #2ecc71; }
+        .status.show { display: block; }
+        .results {
+            background: #2a2a2a;
+            padding: 20px;
+            border-radius: 12px;
+            margin-top: 15px;
+            display: none;
+        }
+        .results.show { display: block; }
+        .stat-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        .stat {
+            background: #333;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        .stat-value {
+            font-size: 32px;
+            font-weight: bold;
+            color: #f7b801;
+        }
+        .stat-label {
+            font-size: 12px;
+            color: #888;
+            margin-top: 5px;
+        }
+        .guidance {
+            background: rgba(247,184,1,0.15);
+            border: 2px solid #f7b801;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+        }
+        .guidance-title {
+            font-weight: bold;
+            color: #f7b801;
+            margin-bottom: 10px;
+        }
+        .route-tag {
+            display: inline-block;
+            background: #004e89;
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 12px;
+            margin: 3px;
+            font-weight: bold;
+        }
+        .directions {
+            background: #333;
+            padding: 15px;
+            border-radius: 8px;
+        }
+        .direction-step {
+            padding: 12px;
+            margin: 8px 0;
+            background: #222;
+            border-left: 3px solid #ff6b35;
+            border-radius: 4px;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+        .step-num {
+            color: #f7b801;
+            font-weight: bold;
+            margin-right: 8px;
+        }
+        .hint {
+            text-align: center;
+            font-size: 12px;
+            color: #888;
+            margin-top: 8px;
+        }
+    </style>
+</head>
+<body>
+    <h1>🚛 Price Chopper Router</h1>
+
+    <div class="card">
+        <div class="card-title">Route Entry</div>
+        <div class="code-inputs">
+            <input type="text" id="origin" class="code-input" placeholder="01">
+            <input type="text" id="dest" class="code-input" placeholder="23">
+        </div>
+        <div class="hint">Store: 01-250 | Warehouse: 505-979</div>
+    </div>
+
+    <div class="card">
+        <input type="text" id="originName" placeholder="Origin" readonly>
+        <input type="text" id="destName" placeholder="Destination" readonly>
+    </div>
+
+    <button id="calcBtn">Calculate Route</button>
+    <button class="secondary" id="clearBtn">Clear</button>
+
+    <div id="status" class="status"></div>
+    <div id="results" class="results"></div>
+
+    <script>
+        var locations = {
+            '01': {name: 'Store #01 - Eastern Parkway', lat: 42.8142, lng: -73.9396},
+            '03': {name: 'Store #03 - Brunswick', lat: 42.7284, lng: -73.6918},
+            '06': {name: 'Store #06 - Cooper Street', lat: 43.3095, lng: -73.6440},
+            '23': {name: 'Store #23 - Madison Avenue', lat: 42.6736, lng: -73.7761},
+            '40': {name: 'Store #40 - Glen Street', lat: 43.0831, lng: -73.7850},
+            '111': {name: 'Store #111 - East Greenbush', lat: 42.5989, lng: -73.7423},
+            '138': {name: 'Store #138 - New Loudon', lat: 42.7477, lng: -73.7601},
+            '548': {name: 'Adirondack Beverages', lat: 42.8250, lng: -73.9680},
+            '979': {name: 'ADM Flour/Topco', lat: 42.8864, lng: -78.8784},
+            '674': {name: 'Agro Foods', lat: 43.1067, lng: -76.2177},
+            '960': {name: 'All Seasonings', lat: 43.0923, lng: -75.6513},
+            '718': {name: 'Arctic Glacier', lat: 41.5034, lng: -74.0104}
+        };
+
+        var routeGuidance = {
+            "01": {common_routes: ["Route 7", "I-890"], pdf_hint: "Route 7 east to five corners → I-890"},
+            "03": {common_routes: ["Route 7"], pdf_hint: "Route 7 east → Altamont Ave"},
+            "06": {common_routes: ["Route 7", "I-90", "I-87"], pdf_hint: "Route 7 West → I-90 Exit 24 → I-87"},
+            "23": {common_routes: ["Route 7", "I-90"], pdf_hint: "Route 7 → I-90 Exit 24 (Albany)"},
+            "40": {common_routes: ["I-90", "I-87"], pdf_hint: "I-90 → I-87 North Exit 15"},
+            "111": {common_routes: ["Route 7", "I-90"], pdf_hint: "Route 7 → I-90 Exit 9"},
+            "138": {common_routes: ["Route 7", "Route 2"], pdf_hint: "Route 7 → Route 2 East"},
+            "548": {common_routes: ["I-890", "Route 5"], pdf_hint: "Thruway Exit 26 → I-890 → Route 5"},
+            "979": {common_routes: ["I-90", "I-190"], pdf_hint: "I-90 West → I-190 North"},
+            "674": {common_routes: ["I-90"], pdf_hint: "I-90 West to Exit 37"},
+            "960": {common_routes: ["Route 365", "Route 5"], pdf_hint: "Exit 33 → Route 365 → Route 5"},
+            "718": {common_routes: ["I-84", "Route 9W"], pdf_hint: "I-84 → Route 9W North"}
+        };
+
+        var selectedOrigin = null;
+        var selectedDest = null;
+
+        document.getElementById('origin').addEventListener('input', function() {
+            var code = this.value.padStart(2, '0');
+            if (locations[code]) {
+                selectedOrigin = code;
+                document.getElementById('originName').value = locations[code].name;
+                this.style.borderColor = '#2ecc71';
+            }
+        });
+
+        document.getElementById('dest').addEventListener('input', function() {
+            var code = this.value.padStart(2, '0');
+            if (locations[code]) {
+                selectedDest = code;
+                document.getElementById('destName').value = locations[code].name;
+                this.style.borderColor = '#2ecc71';
+            }
+        });
+
+        document.getElementById('calcBtn').addEventListener('click', function() {
+            if (!selectedOrigin || !selectedDest) return;
+            document.getElementById('status').textContent = 'Getting directions...';
+            document.getElementById('status').className = 'status loading show';
+            
+            var orig = locations[selectedOrigin];
+            var dest = locations[selectedDest];
+            
+            fetch('https://router.project-osrm.org/route/v1/driving/' +
+                  orig.lng + ',' + orig.lat + ';' +
+                  dest.lng + ',' + dest.lat +
+                  '?steps=true&overview=false')
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    if (data.code === 'Ok') showRoute(data.routes[0]);
+                })
+                .catch(function() {
+                    document.getElementById('status').textContent = 'Error getting route';
+                });
+        });
+
+        function showRoute(route) {
+            document.getElementById('status').className = 'status';
+            
+            var miles = (route.distance / 1609.34).toFixed(1);
+            var mins = Math.round(route.duration / 60);
+            
+            var origGuide = routeGuidance[selectedOrigin] || {common_routes: [], pdf_hint: ''};
+            var destGuide = routeGuidance[selectedDest] || {common_routes: [], pdf_hint: ''};
+            
+            // Find common routes
+            var commonRoutes = origGuide.common_routes.filter(function(r) {
+                return destGuide.common_routes.indexOf(r) !== -1;
+            });
+
+            var html = '<div class="stat-grid">' +
+                '<div class="stat"><div class="stat-value">' + miles + '</div><div class="stat-label">Miles</div></div>' +
+                '<div class="stat"><div class="stat-value">' + mins + '</div><div class="stat-label">Minutes</div></div>' +
+                '</div>';
+
+            // PDF Guidance
+            if (commonRoutes.length > 0 || origGuide.pdf_hint || destGuide.pdf_hint) {
+                html += '<div class="guidance">' +
+                    '<div class="guidance-title">💡 Route Guidance (from PDFs)</div>';
+                
+                if (commonRoutes.length > 0) {
+                    html += '<div style="margin-bottom:10px"><strong>Common highways:</strong><br>';
+                    commonRoutes.forEach(function(r) {
+                        html += '<span class="route-tag">' + r + '</span>';
+                    });
+                    html += '</div>';
+                }
+                
+                if (origGuide.pdf_hint) {
+                    html += '<div style="font-size:13px;margin:5px 0"><strong>From ' + locations[selectedOrigin].name.split(' - ')[1] + ':</strong> ' + origGuide.pdf_hint + '</div>';
+                }
+                if (destGuide.pdf_hint) {
+                    html += '<div style="font-size:13px;margin:5px 0"><strong>To ' + locations[selectedDest].name.split(' - ')[1] + ':</strong> ' + destGuide.pdf_hint + '</div>';
+                }
+                html += '</div>';
+            }
+
+            // OSRM Directions
+            html += '<div class="directions">' +
+                '<div style="font-weight:bold;margin-bottom:15px;color:#f7b801">🧭 Turn-by-Turn Navigation</div>';
+
+            route.legs[0].steps.forEach(function(step, i) {
+                var d = (step.distance / 1609.34).toFixed(1);
+                var txt = '';
+                var road = step.name || '';
+                
+                if (step.maneuver.type === 'depart') txt = 'Head ' + (step.maneuver.modifier || 'straight') + (road ? ' on ' + road : '');
+                else if (step.maneuver.type === 'arrive') txt = 'Arrive at destination';
+                else if (step.maneuver.type === 'turn') txt = 'Turn ' + (step.maneuver.modifier || '') + (road ? ' onto ' + road : '');
+                else if (step.maneuver.type.includes('ramp')) txt = 'Take ramp' + (road ? ' to ' + road : '');
+                else if (step.maneuver.type === 'merge') txt = 'Merge' + (road ? ' onto ' + road : '');
+                else if (step.maneuver.type === 'fork') txt = 'At fork, keep ' + (step.maneuver.modifier || '') + (road ? ' toward ' + road : '');
+                else txt = 'Continue' + (road ? ' on ' + road : '');
+                
+                html += '<div class="direction-step"><span class="step-num">' + (i+1) + '.</span>' + txt + ' <span style="color:#888">(' + d + ' mi)</span></div>';
+            });
+
+            html += '</div>';
+            document.getElementById('results').innerHTML = html;
+            document.getElementById('results').className = 'results show';
+        }
+
+        document.getElementById('clearBtn').addEventListener('click', function() {
+            selectedOrigin = null;
+            selectedDest = null;
+            document.getElementById('origin').value = '';
+            document.getElementById('dest').value = '';
+            document.getElementById('originName').value = '';
+            document.getElementById('destName').value = '';
+            document.getElementById('results').className = 'results';
+            document.getElementById('status').className = 'status';
+        });
+    </script>
+</body>
+</html>
