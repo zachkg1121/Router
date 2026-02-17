@@ -1,0 +1,9 @@
+// When user clicks "Navigate" button
+var originLat = 42.8142;
+var originLng = -73.9396;
+var destLat = 42.6736;
+var destLng = -73.7761;
+
+// This opens OsmAnd app on their phone!
+window.location.href = 'osmand.navigation://' + destLat + ',' + destLng + 
+                       '?start=' + originLat + ',' + originLng;
