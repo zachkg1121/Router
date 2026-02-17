@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Price Chopper Multi-Stop Router</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+            background: #1a1a1a;
+            color: #fff;
+            padding: 15px;
+            font-size: 16px;
+        }
+        h1 {
+            color: #ff6b35;
+            font-size: 24px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        .card {
+            background: #2a2a2a;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 15px;
+        }
+        .card-title {
+            color: #f7b801;
+            font-weight: bold;
+            margin-bottom: 15px;
+            font-size: 14px;
+            text-transform: uppercase;
+        }
+        input {
+            width: 100%;
+            padding: 14px;
+            background: #333;
+            border: 2px solid #555;
+            border-radius: 8px;
+            color: #fff;
+            margin-bottom: 12px;
+            font-size: 16px;
+        }
+        .stop-input {
+            display: grid;
+            grid-template-columns: 80px 1fr 40px;
+            gap: 10px;
+            margin-bottom: 10px;
+            align-items: center;
+        }
+        .stop-num {
+            text-align: center;
+            font-weight: bold;
+            color: #f7b801;
+            font-size: 18px;
+        }
+        .code-input {
+            text-align: center;
+            font-size: 18px;
+            font-weight: bold;
+            padding: 12px;
+        }
+        .remove-btn {
+            width: 40px;
+            height: 40px;
+            background: #e74c3c;
+            border: none;
+            border-radius: 6px;
+            color: white;
+            font-size: 20px;
+            cursor: pointer;
+            padding: 0;
+        }
+        button {
+            width: 100%;
+            padding: 16px;
+            background: #ff6b35;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            margin-bottom: 10px;
+            cursor: pointer;
+        }
+        button:active { transform: scale(0.98); }
+        button.secondary { background: #555; }
+        button.add { background: #2ecc71; }
+        .warehouse-badge {
+            background: linear-gradient(135deg, #3498db, #2980b9);
+            color: white;
+            padding: 12px;
+            border-radius: 8px;
+            text-align: center;
+            font-weight: bold;
+            margin-bottom: 15px;
+        }
+        .results {
+            background: #2a2a2a;
+            padding: 20px;
+            border-radius: 12px;
+            margin-top: 15px;
+            display: none;
+        }
+        .results.show { display: block; }
+        .route-leg {
+            background: #333;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            border-left: 4px solid #ff6b35;
+        }
+        .route-leg.warehouse { border-left-color: #3498db; }
+        .route-leg.google { border-left-color: #4285f4; }
+        .leg-header {
+            font-weight: bold;
+            font-size: 16px;
+            margin-bottom: 10px;
+            color: #f7b801;
+        }
+        .direction-step {
+            padding: 10px;
+            margin: 6px 0;
+            background: #222;
+            border-left: 3px solid #ff6b35;
+            border-radius: 4px;
+            font-size: 14px;
+            line-height: 1.7;
+        }
+        .step-num {
+            color: #f7b801;
+            font-weight: bold;
+            margin-right: 8px;
+        }
+        .pdf-badge {
+            background: #2ecc71;
+            color: white;
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: bold;
+            display: inline-block;
+            margin-bottom: 10px;
+        }
+        .google-badge {
+            background: #4285f4;
+            color: white;
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: bold;
+            display: inline-block;
+            margin-bottom: 10px;
+        }
+        .truck-badge {
+            background: #e67e22;
+            color: white;
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: bold;
+            display: inline-block;
+            margin-left: 5px;
+        }
+        .stat-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px solid #444;
+        }
+        .stat {
+            font-size: 13px;
+            color: #888;
+        }
+        .stat-value {
+            color: #f7b801;
+            font-weight: bold;
+        }
+        .total-stats {
+            background: linear-gradient(135deg, #2ecc71, #27ae60);
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 15px;
+            color: white;
+            text-align: center;
+        }
+        .total-value {
+            font-size: 36px;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #f7b801;
+            display: none;
+        }
+        .loading.show { display: block; }
+        .hint {
+            text-align: center;
+            font-size: 12px;
+            color: #888;
+            margin-top: 8px;
+        }
+    </style>
+</head>
+<body>
+    <h1>🚛 Multi-Stop Router</h1>
+
+    <div class="warehouse-badge">
+        🏭 START/END: 501 Duanesburg Rd, Schenectady, NY
+    </div>
+
+    <div class="card">
+        <div class="card-title">Add Delivery Stops</div>
+        <div id="stopsList"></div>
+        <button class="add" onclick="addStop()">+ Add Stop</button>
+    </div>
+
+    <button onclick="calculateRoute()">Calculate Route</button>
+    <button class="secondary" onclick="clearRoute()">Clear All</button>
+
+    <div class="loading" id="loading">⟳ Getting Google Maps truck routes...</div>
+    <div id="results" class="results"></div>
+
+    <script>
+        var GOOGLE_API_KEY = 'AIzaSyD0KziSuhJXYFOVAGjxFx1bFtrD3N-WQd5l';
+        
+        var WAREHOUSE = {
+            name: 'Distribution Center',
+            address: '501 Duanesburg Rd, Schenectady, NY 12302',
+            lat: 42.7942,
+            lng: -74.0626
+        };
+
+        var locations = {
+            '01': {
+                name: 'Store #01 - Eastern Parkway',
+                address: '1640 Eastern Parkway, Schenectady, NY 12309',
+                lat: 42.8142, lng: -73.9396,
+                pdfFromWarehouse: 'Route 7 east to five corners intersection → Continue straight onto Broadway to I-890 east → Take I-890 east to Exit 6 (Michigan Ave) → Turn left onto Michigan Ave → Right onto State St (Route 5) → Left onto McClellan St → Store entrance on right past cemetery'
+            },
+            '03': {
+                name: 'Store #03 - Brunswick',
+                address: '716 Hoosick Rd., Troy, NY 12180',
+                lat: 42.7284, lng: -73.6918,
+                pdfFromWarehouse: 'Route 7 east → Bear left onto Altamont Ave → Right on Chrisler Ave (first right after RR underpass) → Route 7 east to I-87 North Exit 7 → Route 7 east through Troy → Right at first stoplight past Lake Ave into Brunswick Plaza'
+            },
+            '06': {
+                name: 'Store #06 - Cooper Street',
+                address: '84 Cooper Street, Glens Falls, NY 12801',
+                lat: 43.3095, lng: -73.6440,
+                pdfFromWarehouse: 'Route 7 West to NYS Thruway Exit 25-A → I-90 East to Exit 24 (Albany) → I-87 North to Exit 18 → Turn right at end of ramp → Bear right onto Hudson Avenue (at 5th traffic light) → Continue past Glens Falls Hospital to traffic circle → Bear right onto Ridge St'
+            },
+            '23': {
+                name: 'Store #23 - Madison Avenue',
+                address: '1060 Madison Avenue, Albany, New York 12208',
+                lat: 42.6736, lng: -73.7761,
+                pdfFromWarehouse: 'Route 7 to NYS Thruway Exit 25-A → I-90 East to Exit 24 (Albany) → After toll booth take first exit to Western Avenue → Left onto Route 20 East (Western Avenue) → Bear right onto Madison Ave → Store on corner of Madison Ave and West Lawrence St'
+            },
+            '40': {
+                name: 'Store #40 - Glen Street',
+                address: '677 Upper Glen St, Queensbury, NY 12804',
+                lat: 43.0831, lng: -73.7850,
+                pdfFromWarehouse: 'Route 7 West to NYS Thruway Exit 25-A → I-90 East to Exit 24 (Albany) → I-87 North to Exit 15 → Turn right onto Route 50 North → Follow Route 50 North for two stoplights → Turn right into entrance'
+            },
+            '111': {
+                name: 'Store #111 - East Greenbush',
+                address: '501 Columbia Turnpike, Rensselaer, NY 12144',
+                lat: 42.5989, lng: -73.7423,
+                pdfFromWarehouse: 'Route 7 East to NYS Thruway Exit 25-A → I-90 East to Exit 9 → Turn right onto Route 4 South → Follow Route 4 South to Routes 9 & 20 → Turn right on Routes 9 & 20 to Columbia Plaza → Right at light into plaza entrance'
+            },
+            '138': {
+                name: 'Store #138 - New Loudon',
+                address: '873 New Loudon Road, Latham, New York, 12110',
+                lat: 42.7477, lng: -73.7601,
+                pdfFromWarehouse: 'Route 7 East → Bear left onto Altamont Avenue → Past Altamont Ave Price Chopper to Chrisler Avenue → Right on Chrisler Ave to Route 7 East → Follow to Route 2 East → At traffic circle go to Route 9 North → Store on the right'
+            },
+            '548': {
+                name: 'Adirondack Beverages',
+                address: 'Corporation Park, Scotia, NY 12302',
+                lat: 42.8250, lng: -73.9680,
+                pdfFromWarehouse: 'Thruway West to Exit 26 → Stay left taking I-890 to the end → Right onto Route 5 → At next stoplight take left → Bear right → Look for Adirondack trailers'
+            },
+            '979': {
+                name: 'ADM Flour/Topco',
+                address: '250 Ganson St, Buffalo, NY 14203',
+                lat: 42.8864, lng: -78.8784,
+                pdfFromWarehouse: 'NYS Thruway I-90 West to Exit 53 (I-190 North) → Follow I-190 North to Exit 5 (Hamburg St) → Right onto Hamburg Street → Follow for two blocks → Right onto South Park Ave → Follow to Louisiana Street → Take left'
+            },
+            '674': {
+                name: 'Agro Foods',
+                address: '7640 Edgecomb Drive, Liverpool, NY 13088',
+                lat: 43.1067, lng: -76.2177,
+                pdfFromWarehouse: 'I-90 West to Exit 37 → Turn right onto Electronics Parkway → Follow on Electronics Parkway (turns into Honey Clay Blvd) → Proceed to Dey Rd (look for AAA Travel Service) → Go 1/4 mile → Turn right onto Edgecomb Dr → Pioneer Warehouse on right'
+            },
+            '960': {
+                name: 'All Seasonings',
+                address: '1043 Freedom Drive, Oneida, NY 13421',
+                lat: 43.0923, lng: -75.6513,
+                pdfFromWarehouse: 'NYS Thruway Exit 33 (Vernon/Verona) → Onto Route 365 Southwest to end → Right onto Route 5 West → Follow to intersection of Route 5/Route 46 → Left onto Route 46 → Follow 1/2 mile → Oneida Business Park - Freedom Drive on left'
+            },
+            '718': {
+                name: 'Arctic Glacier',
+                address: 'Newburgh, NY 12550',
+                lat: 41.5034, lng: -74.0104,
+                pdfFromWarehouse: 'I-84 West to Exit 10 (Route 9W) → Turn right onto Route 9W North → Facility approximately 2 miles on the right side'
+            }
+        };
+
+        var stops = [];
+        var routeData = [];
+
+        function addStop() {
+            stops.push(null);
+            renderStops();
+        }
+
+        function removeStop(index) {
+            stops.splice(index, 1);
+            renderStops();
+        }
+
+        function renderStops() {
+            var html = '';
+            stops.forEach(function(stop, i) {
+                html += '<div class="stop-input">' +
+                       '<div class="stop-num">STOP ' + (i + 1) + '</div>' +
+                       '<input type="text" class="code-input" placeholder="Code" maxlength="3" ' +
+                       'value="' + (stop || '') + '" onchange="updateStop(' + i + ', this.value)">' +
+                       '<button class="remove-btn" onclick="removeStop(' + i + ')">×</button>' +
+                       '</div>';
+            });
+            document.getElementById('stopsList').innerHTML = html;
+        }
+
+        function updateStop(index, value) {
+            var code = value.padStart(2, '0');
+            if (locations[code]) {
+                stops[index] = code;
+            }
+        }
+
+        function calculateRoute() {
+            var validStops = stops.filter(function(s) { return s && locations[s]; });
+            
+            if (validStops.length === 0) {
+                alert('Please add at least one stop');
+                return;
+            }
+
+            document.getElementById('loading').classList.add('show');
+            document.getElementById('results').classList.remove('show');
+            routeData = [];
+
+            var legs = [];
+            
+            legs.push({
+                from: WAREHOUSE,
+                to: locations[validStops[0]],
+                type: 'pdf-from-warehouse',
+                stopNum: 1
+            });
+
+            for (var i = 0; i < validStops.length - 1; i++) {
+                legs.push({
+                    from: locations[validStops[i]],
+                    to: locations[validStops[i + 1]],
+                    type: 'google',
+                    stopNum: i + 2
+                });
+            }
+
+            legs.push({
+                from: locations[validStops[validStops.length - 1]],
+                to: WAREHOUSE,
+                type: 'pdf-to-warehouse',
+                code: validStops[validStops.length - 1]
+            });
+
+            processLegs(legs, 0);
+        }
+
+        function processLegs(legs, index) {
+            if (index >= legs.length) {
+                displayRoute();
+                return;
+            }
+
+            var leg = legs[index];
+            
+            if (leg.type === 'pdf-from-warehouse') {
+                routeData.push({
+                    type: 'pdf-from-warehouse',
+                    from: leg.from.name,
+                    to: leg.to.name,
+                    stopNum: leg.stopNum,
+                    directions: leg.to.pdfFromWarehouse,
+                    miles: estimateDistance(leg.from.lat, leg.from.lng, leg.to.lat, leg.to.lng),
+                    mins: 0
+                });
+                processLegs(legs, index + 1);
+            }
+            else if (leg.type === 'pdf-to-warehouse') {
+                var reversedDirections = reverseDirections(locations[leg.code].pdfFromWarehouse);
+                routeData.push({
+                    type: 'pdf-to-warehouse',
+                    from: leg.from.name,
+                    to: leg.to.name,
+                    directions: reversedDirections,
+                    miles: estimateDistance(leg.from.lat, leg.from.lng, leg.to.lat, leg.to.lng),
+                    mins: 0
+                });
+                processLegs(legs, index + 1);
+            }
+            else if (leg.type === 'google') {
+                getGoogleRoute(leg.from, leg.to, function(directions, miles, mins) {
+                    routeData.push({
+                        type: 'google',
+                        from: leg.from.name,
+                        to: leg.to.name,
+                        stopNum: leg.stopNum,
+                        directions: directions,
+                        miles: miles,
+                        mins: mins
+                    });
+                    processLegs(legs, index + 1);
+                });
+            }
+        }
+
+        function getGoogleRoute(from, to, callback) {
+            var url = 'https://maps.googleapis.com/maps/api/directions/json' +
+                     '?origin=' + encodeURIComponent(from.address) +
+                     '&destination=' + encodeURIComponent(to.address) +
+                     '&key=' + GOOGLE_API_KEY +
+                     '&avoid=tolls';
+
+            fetch(url)
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    if (data.status === 'OK' && data.routes && data.routes.length > 0) {
+                        var route = data.routes[0];
+                        var leg = route.legs[0];
+                        var miles = (leg.distance.value / 1609.34).toFixed(1);
+                        var mins = Math.round(leg.duration.value / 60);
+                        
+                        var steps = leg.steps.map(function(step) {
+                            var dist = (step.distance.value / 1609.34).toFixed(1);
+                            var instruction = step.html_instructions.replace(/<[^>]*>/g, '');
+                            return {text: instruction, distance: dist};
+                        });
+                        
+                        callback(steps, miles, mins);
+                    } else {
+                        callback([{text: 'Route unavailable - use navigation app', distance: '0'}], 
+                                estimateDistance(from.lat, from.lng, to.lat, to.lng), 0);
+                    }
+                })
+                .catch(function(error) {
+                    console.error('Google Maps error:', error);
+                    callback([{text: 'Could not get route - use navigation app', distance: '0'}], 
+                            estimateDistance(from.lat, from.lng, to.lat, to.lng), 0);
+                });
+        }
+
+        function reverseDirections(directions) {
+            var steps = directions.split('→').map(function(s) { return s.trim(); });
+            steps.reverse();
+            
+            var reversed = steps.map(function(step) {
+                step = step.replace(/\bLeft\b/gi, 'TEMP_RIGHT')
+                          .replace(/\bRight\b/gi, 'Left')
+                          .replace(/TEMP_RIGHT/g, 'Right');
+                
+                step = step.replace(/\bEast\b/gi, 'TEMP_WEST')
+                          .replace(/\bWest\b/gi, 'East')
+                          .replace(/TEMP_WEST/g, 'West');
+                
+                step = step.replace(/\bNorth\b/gi, 'TEMP_SOUTH')
+                          .replace(/\bSouth\b/gi, 'North')
+                          .replace(/TEMP_SOUTH/g, 'South');
+                
+                step = step.replace(/\bonto\b/gi, 'from');
+                step = step.replace(/\bTake\b/gi, 'Exit');
+                
+                return step;
+            });
+            
+            return reversed.join(' → ');
+        }
+
+        function estimateDistance(lat1, lng1, lat2, lng2) {
+            var R = 3959;
+            var dLat = (lat2 - lat1) * Math.PI / 180;
+            var dLon = (lng2 - lng1) * Math.PI / 180;
+            var a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                    Math.sin(dLon/2) * Math.sin(dLon/2);
+            var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+            return (R * c * 1.25).toFixed(1);
+        }
+
+        function displayRoute() {
+            document.getElementById('loading').classList.remove('show');
+            
+            var totalMiles = routeData.reduce(function(sum, leg) { 
+                return sum + parseFloat(leg.miles); 
+            }, 0).toFixed(1);
+            var totalMins = routeData.reduce(function(sum, leg) { 
+                return sum + (leg.mins || Math.round(leg.miles / 50 * 60)); 
+            }, 0);
+
+            var html = '<div class="total-stats">' +
+                '<div>TOTAL ROUTE</div>' +
+                '<div class="total-value">' + totalMiles + ' mi</div>' +
+                '<div>' + Math.floor(totalMins / 60) + 'h ' + (totalMins % 60) + 'm</div>' +
+                '</div>';
+
+            routeData.forEach(function(leg, i) {
+                var legClass = leg.type.includes('warehouse') ? 'warehouse' : leg.type === 'google' ? 'google' : '';
+                var badge = leg.type === 'google' ? 
+                           '<span class="google-badge">GOOGLE MAPS</span><span class="truck-badge">TRUCK ROUTE</span>' : 
+                           '<span class="pdf-badge">PDF DIRECTIONS</span>';
+                
+                html += '<div class="route-leg ' + legClass + '">' +
+                       '<div class="leg-header">';
+                
+                if (leg.stopNum) {
+                    html += 'LEG ' + (i + 1) + ': ' + (i === 0 ? 'Warehouse' : 'STOP ' + (i)) + ' → STOP ' + leg.stopNum;
+                } else {
+                    html += 'LEG ' + (i + 1) + ': ' + leg.from + ' → Warehouse';
+                }
+                
+                html += '</div>' + badge;
+
+                if (typeof leg.directions === 'string') {
+                    html += '<div class="direction-step">' + leg.directions + '</div>';
+                } else {
+                    leg.directions.forEach(function(step, j) {
+                        html += '<div class="direction-step">' +
+                               '<span class="step-num">' + (j + 1) + '.</span>' +
+                               step.text + ' <span style="color:#888">(' + step.distance + ' mi)</span>' +
+                               '</div>';
+                    });
+                }
+
+                var time = leg.mins || Math.round(leg.miles / 50 * 60);
+                html += '<div class="stat-row">' +
+                       '<div class="stat">Distance: <span class="stat-value">' + leg.miles + ' mi</span></div>' +
+                       '<div class="stat">Time: <span class="stat-value">' + time + ' min</span></div>' +
+                       '</div></div>';
+            });
+
+            document.getElementById('results').innerHTML = html;
+            document.getElementById('results').classList.add('show');
+        }
+
+        function clearRoute() {
+            stops = [];
+            routeData = [];
+            renderStops();
+            document.getElementById('results').classList.remove('show');
+            document.getElementById('loading').classList.remove('show');
+        }
+
+        addStop();
+        console.log('✅ Google Maps Truck Router Ready!');
+    </script>
+</body>
+</html>
