@@ -1,0 +1,2093 @@
+<!DOCTYPE html>
+
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Price Chopper Multi-Stop Router - All Stores</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+            background: #1a1a1a;
+            color: #fff;
+            padding: 15px;
+            font-size: 16px;
+        }
+        h1 {
+            color: #ff6b35;
+            font-size: 24px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        .card {
+            background: #2a2a2a;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 15px;
+        }
+        .card-title {
+            color: #f7b801;
+            font-weight: bold;
+            margin-bottom: 15px;
+            font-size: 14px;
+            text-transform: uppercase;
+        }
+        input {
+            width: 100%;
+            padding: 14px;
+            background: #333;
+            border: 2px solid #555;
+            border-radius: 8px;
+            color: #fff;
+            margin-bottom: 12px;
+            font-size: 16px;
+        }
+        .stop-input {
+            display: grid;
+            grid-template-columns: 80px 1fr 40px;
+            gap: 10px;
+            margin-bottom: 10px;
+            align-items: center;
+        }
+        .stop-num {
+            text-align: center;
+            font-weight: bold;
+            color: #f7b801;
+            font-size: 18px;
+        }
+        .code-input {
+            text-align: center;
+            font-size: 18px;
+            font-weight: bold;
+            padding: 12px;
+        }
+        .remove-btn {
+            width: 40px;
+            height: 40px;
+            background: #e74c3c;
+            border: none;
+            border-radius: 6px;
+            color: white;
+            font-size: 20px;
+            cursor: pointer;
+        }
+        button {
+            width: 100%;
+            padding: 16px;
+            background: #ff6b35;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            margin-bottom: 10px;
+            cursor: pointer;
+        }
+        button:active { transform: scale(0.98); }
+        button.secondary { background: #555; }
+        button.add { background: #2ecc71; }
+        .warehouse-badge {
+            background: linear-gradient(135deg, #3498db, #2980b9);
+            color: white;
+            padding: 12px;
+            border-radius: 8px;
+            text-align: center;
+            font-weight: bold;
+            margin-bottom: 15px;
+        }
+        .results {
+            background: #2a2a2a;
+            padding: 20px;
+            border-radius: 12px;
+            margin-top: 15px;
+            display: none;
+        }
+        .results.show { display: block; }
+        .route-leg {
+            background: #333;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            border-left: 4px solid #ff6b35;
+        }
+        .route-leg.warehouse { border-left-color: #3498db; }
+        .route-leg.smart { border-left-color: #2ecc71; }
+        .leg-header {
+            font-weight: bold;
+            font-size: 16px;
+            margin-bottom: 10px;
+            color: #f7b801;
+        }
+        .pdf-badge {
+            background: #2ecc71;
+            color: white;
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: bold;
+            display: inline-block;
+            margin-bottom: 10px;
+        }
+        .smart-badge {
+            background: #9b59b6;
+            color: white;
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: bold;
+            display: inline-block;
+            margin-bottom: 10px;
+        }
+        .highway-badge {
+            background: #3498db;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: bold;
+            display: inline-block;
+            margin: 3px;
+        }
+        .direction-list {
+            background: #222;
+            padding: 15px;
+            border-radius: 6px;
+            margin: 10px 0;
+        }
+        .direction-item {
+            padding: 8px 0;
+            margin: 5px 0;
+            padding-left: 20px;
+            position: relative;
+            line-height: 1.6;
+            font-size: 14px;
+        }
+        .direction-item:before {
+            content: "•";
+            color: #f7b801;
+            font-weight: bold;
+            font-size: 20px;
+            position: absolute;
+            left: 0;
+        }
+        .stat-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px solid #444;
+        }
+        .stat {
+            font-size: 13px;
+            color: #888;
+        }
+        .stat-value {
+            color: #f7b801;
+            font-weight: bold;
+        }
+        .total-stats {
+            background: linear-gradient(135deg, #2ecc71, #27ae60);
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 15px;
+            color: white;
+            text-align: center;
+        }
+        .total-value {
+            font-size: 36px;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+        .hint {
+            text-align: center;
+            font-size: 12px;
+            color: #888;
+            margin-top: 8px;
+        }
+    </style>
+</head>
+<body>
+    <h1>🚛 Multi-Stop Router</h1>
+
+```
+<div class="warehouse-badge">
+    🏭 START/END: 501 Duanesburg Rd, Schenectady, NY
+</div>
+
+<div class="card">
+    <div class="card-title">Add Delivery Stops</div>
+    <div id="stopsList"></div>
+    <button class="add" onclick="addStop()">+ Add Stop</button>
+    <div class="hint">107 stores available</div>
+</div>
+
+<button onclick="calculateRoute()">Calculate Route</button>
+<button class="secondary" onclick="clearRoute()">Clear All</button>
+
+<div id="results" class="results"></div>
+
+<script>
+    var WAREHOUSE = {
+        name: 'Distribution Center',
+        address: '501 Duanesburg Rd, Schenectady, NY 12302',
+        lat: 42.7942,
+        lng: -74.0626
+    };
+
+    var locations = {
+    "01": {
+            "name": "Store #01 - EASTERN PARKWAY",
+            "address": "1640 Eastern Parkway, Schenectady, NY 12309",
+            "lat": 42.8142,
+            "lng": -73.9396,
+            "highways": [
+                    "Route 7",
+                    "I-890"
+            ],
+            "pdfDirections": [
+                    "Route 7 east to five corners intersection.",
+                    "to I-890 east.",
+                    "Take I-890 east to exit 6 (Michigan Ave.) Turn left ..."
+            ]
+    },
+    "03": {
+            "name": "Store #03 - BRUNSWICK",
+            "address": "716 Hoosick Rd., Troy, NY 12180",
+            "lat": 42.7284,
+            "lng": -73.6918,
+            "highways": [
+                    "Route 7"
+            ],
+            "pdfDirections": [
+                    "Route 7 east, bear left onto Altamont Ave.",
+                    "Turn right onto."
+            ]
+    },
+    "04": {
+            "name": "Store #04 - LINCOLN",
+            "address": "10 Lumberyard Rd., Lincoln, NH 03251",
+            "lat": 44.0581,
+            "lng": -71.6447,
+            "highways": [
+                    "Route 7",
+                    "I-890"
+            ],
+            "pdfDirections": [
+                    "Straight onto Broadway under I-890 to Edison Ave."
+            ]
+    },
+    "12": {
+            "name": "Store #12 - JOHNSTOWN",
+            "address": "North Comrie, Johnstown, NY 12095",
+            "lat": 43.0059,
+            "lng": -74.3826,
+            "highways": [
+                    "Route 7",
+                    "I-90"
+            ],
+            "pdfDirections": [
+                    "Route 7 West to NYS Thruway Exit 25-A.",
+                    "Take I-90 West.",
+                    "Proceed to Exit 28.",
+                    "Proceed to first traffic light (Route 30-A) and t..."
+            ]
+    },
+    "23": {
+            "name": "Store #23 - MADISON AVENUE",
+            "address": "1060 Madison Avenue, Albany, New York 12208, booth take first exit to Western Avenue. Take left on to Route 20 East (Western Avenue).",
+            "lat": 42.6736,
+            "lng": -73.7761,
+            "highways": [
+                    "Route 7",
+                    "I-90"
+            ],
+            "pdfDirections": [
+                    "Route 7 to NYS Thruway Exit 25-A.",
+                    "Take I-90 East.",
+                    "Proceed to Exit 24 (Albany)."
+            ]
+    },
+    "24": {
+            "name": "Store #24 - WEST CARTHAGE",
+            "address": "60 High Street, West Carthage, NY 13421",
+            "lat": 43.0,
+            "lng": -73.7,
+            "highways": [
+                    "Route 7",
+                    "I-90",
+                    "Route 5"
+            ],
+            "pdfDirections": [
+                    "7 West to I-90 (NYS Thruway) West to exit 31."
+            ]
+    },
+    "28": {
+            "name": "Store #28 - HAMILTON SQUARE",
+            "address": "Guilderland, , NY 12084",
+            "lat": 42.7055,
+            "lng": -73.9118,
+            "highways": [],
+            "pdfDirections": [
+                    "Directions not available - use navigation app"
+            ]
+    },
+    "29": {
+            "name": "Store #29 - POTSDAM",
+            "address": "201 Market ST.(NY56), Potsdam, NY 13676",
+            "lat": 43.25,
+            "lng": -73.45,
+            "highways": [
+                    "Route 7",
+                    "I-90",
+                    "Route 5"
+            ],
+            "pdfDirections": [
+                    "7 West to I-90 (NYS Thruway) West to exit 31.",
+                    "East to I-790 West.",
+                    "Follow I-790 West to Rte."
+            ]
+    },
+    "30": {
+            "name": "Store #30 - OGDENSBURG",
+            "address": "981 Ford Street Ext., Ogdensburg, NY 13669",
+            "lat": 42.8,
+            "lng": -73.9,
+            "highways": [],
+            "pdfDirections": [
+                    "Directions not available - use navigation app"
+            ]
+    },
+    "32": {
+            "name": "Store #32 - MASSENA",
+            "address": "152 Harte Haven Plaza, Massena, NY 13662",
+            "lat": 42.9,
+            "lng": -73.80000000000001,
+            "highways": [
+                    "Route 7",
+                    "I-890"
+            ],
+            "pdfDirections": [
+                    "(after I-890), bear right onto Erie Blvd."
+            ]
+    },
+    "36": {
+            "name": "Store #36 - COHOES",
+            "address": "240 Congress Street, Cohoes, NY 12047",
+            "lat": 42.7751,
+            "lng": -73.7012,
+            "highways": [
+                    "Route 7"
+            ],
+            "pdfDirections": [
+                    "Route 7 East, bear left on to Altamont Avenue.",
+                    "Turn rig..."
+            ]
+    },
+    "38": {
+            "name": "Store #38 - GLENVILLE",
+            "address": "Address not found",
+            "lat": 43.199999999999996,
+            "lng": -73.5,
+            "highways": [],
+            "pdfDirections": [
+                    "Directions not available - use navigation app"
+            ]
+    },
+    "39": {
+            "name": "Store #39 - WILTON",
+            "address": "Address not found",
+            "lat": 43.25,
+            "lng": -73.45,
+            "highways": [],
+            "pdfDirections": [
+                    "Directions not available - use navigation app"
+            ]
+    },
+    "40": {
+            "name": "Store #40 - GLEN STREET",
+            "address": "677 Upper Glen Street",
+            "lat": 43.0831,
+            "lng": -73.785,
+            "highways": [],
+            "pdfDirections": [
+                    "Directions not available - use navigation app"
+            ]
+    },
+    "44": {
+            "name": "Store #44 - NORTH UTICA",
+            "address": "Auert Avenue, Utica, NY 13501",
+            "lat": 43.0,
+            "lng": -73.7,
+            "highways": [
+                    "Route 7",
+                    "I-90"
+            ],
+            "pdfDirections": [
+                    "Route 7 West to NYS Thruway Exit 25-A.",
+                    "Take I-90 West.",
+                    "Proceed to Exit 31 (Utica)."
+            ]
+    },
+    "45": {
+            "name": "Store #45 - DELAWARE",
+            "address": "Delaware Avenue & Myrtle Avenue, Albany, NY 12210",
+            "lat": 42.6584,
+            "lng": -73.7514,
+            "highways": [
+                    "Route 7",
+                    "I-90"
+            ],
+            "pdfDirections": [
+                    "Route 7 West to NYS Thruway Exit 25-A.",
+                    "Take I-90 East.",
+                    "Proceed to Exit 24 (Albany)."
+            ]
+    },
+    "46": {
+            "name": "Store #46 - CANTON",
+            "address": "111 E. Main Street, Canton, NY 13617",
+            "lat": 43.099999999999994,
+            "lng": -73.60000000000001,
+            "highways": [
+                    "Route 7",
+                    "I-90",
+                    "Route 5"
+            ],
+            "pdfDirections": [
+                    "Rte.7 West to I-90 West (NYS Thruway) to Exit 31.",
+                    "5 East to I-790 West to Rte."
+            ]
+    },
+    "94": {
+            "name": "Store #94 - MECHANICVILLE",
+            "address": "1 Price Chopper Plaza, Mechanicville, New York, 12118",
+            "lat": 42.9039,
+            "lng": -73.6873,
+            "highways": [
+                    "Route 7"
+            ],
+            "pdfDirections": [
+                    "Route 7 East to Five Corners intersection."
+            ]
+    },
+    "102": {
+            "name": "Store #102 - WATERTOWN",
+            "address": "Address not found",
+            "lat": 44.0059,
+            "lng": -75.9107,
+            "highways": [],
+            "pdfDirections": [
+                    "Directions not available - use navigation app"
+            ]
+    },
+    "111": {
+            "name": "Store #111 - EAST\nGREENBUSH",
+            "address": "501 Columbia Turnpike, Rensselaer, NY 12144",
+            "lat": 42.5989,
+            "lng": -73.7423,
+            "highways": [
+                    "Route 7",
+                    "I-90",
+                    "Route 4"
+            ],
+            "pdfDirections": [
+                    "501 Columbia Turnpike.",
+                    "Route 7 East to NYS Thruway Exit 25-A.",
+                    "Take I-90 East.",
+                    "Proceed to Exit 24.",
+                    "Take I-90 East to Exit 9.",
+                    "Turn right on to Route 4 South."
+            ]
+    },
+    "112": {
+            "name": "Store #112 - CLIFTON SHOPPERS WORLD",
+            "address": "15 Park Avenue, Clifton Park, New York, 12065",
+            "lat": 42.8654,
+            "lng": -73.7707,
+            "highways": [
+                    "Route 7"
+            ],
+            "pdfDirections": [
+                    "Route 7 East to Five Corners intersection.",
+                    "Turn..."
+            ]
+    },
+    "114": {
+            "name": "Store #114 - MIDDLETOWN",
+            "address": "511 Shutt Road Ext., Middletown, New York, 10940",
+            "lat": 41.4459,
+            "lng": -74.4227,
+            "highways": [
+                    "Route 7",
+                    "I-90",
+                    "I-87",
+                    "I-84"
+            ],
+            "pdfDirections": [
+                    "Take Route 7 West to NYS Thruway Exit 25-A.",
+                    "Take I-90 East to I-87 South (towards New.",
+                    "Take I-87 South to Exit 17.",
+                    "Take I-84 We..."
+            ]
+    },
+    "116": {
+            "name": "Store #116 - COBLESKILL",
+            "address": "105 Plaza Lane, Barnersville Road, Cobleskill, New York",
+            "lat": 42.5956,
+            "lng": -74.4818,
+            "highways": [
+                    "Route 7"
+            ],
+            "pdfDirections": [
+                    "Route 7 West to I-88 West to Exit 22 (Route 145).",
+                    "Turn right at end of ramp to traffic light.",
+                    "Turn left on to Route 7 West an..."
+            ]
+    },
+    "123": {
+            "name": "Store #123 - BARRE",
+            "address": "Ames Shopping Plaza, Barre, Vermont, 05641",
+            "lat": 42.949999999999996,
+            "lng": -73.75,
+            "highways": [
+                    "Route 7",
+                    "I-90",
+                    "I-87"
+            ],
+            "pdfDirections": [
+                    "Route 7 West to NYS Thruway Exit 25-A.",
+                    "Take I-90 East.",
+                    "Proceed to Exit 24 (Albany).",
+                    "Take I-87 North to Exit 20.",
+                    "Turn left at bottom of ramp on t..."
+            ]
+    },
+    "125": {
+            "name": "Store #125 - MANCHESTER",
+            "address": "Manchester Shopping Center, Manchester, Vermont, 05255",
+            "lat": 43.1645,
+            "lng": -73.0773,
+            "highways": [
+                    "Route 7",
+                    "I-90",
+                    "I-87"
+            ],
+            "pdfDirections": [
+                    "Route 7 West to NYS Thruway Exit 25-A.",
+                    "Take I-90 East.",
+                    "Proceed to Exit 24 (Albany).",
+                    "Take I-87 North to Exit 7 (Route 7 East..."
+            ]
+    },
+    "129": {
+            "name": "Store #129 - POUGHKEEPSIE",
+            "address": "432 South Road, Poughkeepsie, New York, 12601",
+            "lat": 43.25,
+            "lng": -73.45,
+            "highways": [
+                    "Route 7",
+                    "I-90",
+                    "I-87"
+            ],
+            "pdfDirections": [
+                    "Take Route 7 West to NYS Thruway Exit 25-A.",
+                    "Take I-90, East to I-87 South (towards New.",
+                    "Follow I-87 South to Exit 18."
+            ]
+    },
+    "130": {
+            "name": "Store #130 - ENDICOTT",
+            "address": "1001 North Street \u2013 Suite 11, Endicott, New York, 13760",
+            "lat": 42.8,
+            "lng": -73.9,
+            "highways": [
+                    "Route 7"
+            ],
+            "pdfDirections": [
+                    "Route 7 West to I-88 to I-81 South to Route 17 West (Elmira).",
+                    "Get off at Exit 67-N (Route."
+            ]
+    },
+    "131": {
+            "name": "Store #131 - RUTLAND",
+            "address": "38 Rutland Shopping Plaza, Rutland, Vermont, 05701",
+            "lat": 43.6106,
+            "lng": -72.9726,
+            "highways": [
+                    "Route 7",
+                    "I-90",
+                    "I-87"
+            ],
+            "pdfDirections": [
+                    "Route 7 West to NYS Thruway Exit 25-A.",
+                    "Take I-90 East.",
+                    "Proceed to Exit 24 (Albany).",
+                    "Take I-87 North to Exit 20.",
+                    "Turn left at bottom of r..."
+            ]
+    },
+    "134": {
+            "name": "Store #134 - ONEONTA",
+            "address": "1000 Main Street, Oneonta, New York, 13820",
+            "lat": 43.0,
+            "lng": -73.7,
+            "highways": [
+                    "Route 7"
+            ],
+            "pdfDirections": [
+                    "Route 7 West to I-88 West to Exit 16 (Davenport/Emmons).",
+                    "Turn right at end of the ramp.",
+                    "and continue to Route 7.",
+                    "Turn left on to Route 7 West."
+            ]
+    },
+    "136": {
+            "name": "Store #136 - BRATTLEBORO",
+            "address": "499 Canal Street, Brattleboro, Vermont, 05301",
+            "lat": 43.099999999999994,
+            "lng": -73.60000000000001,
+            "highways": [
+                    "Route 7"
+            ],
+            "pdfDirections": [
+                    "Route 7 East, bear left onto Altamont Avenue.",
+                    "Turn r..."
+            ]
+    },
+    "137": {
+            "name": "Store #137 - MORRISVILLE",
+            "address": "Morrisville, Vermont 05661, Take I-87 North to Exit 20. Turn left at bottom of ramp on to Route 9 North. Proceed on, Ann. Turn left on to Route 4 North. Follow Route 4 North through Whitehall, NY to Vermont",
+            "lat": 43.15,
+            "lng": -73.55000000000001,
+            "highways": [
+                    "Route 7",
+                    "I-90",
+                    "I-87"
+            ],
+            "pdfDirections": [
+                    "Route 15 & Munson Ave.",
+                    "Route 7 West to NYS Thruway Exit 25-A.",
+                    "Take I-90 East.",
+                    "Proceed to Exit 24 (Albany).",
+                    "Take I-87 North to Exit 20.",
+                    "Turn left at bottom of ..."
+            ]
+    },
+    "138": {
+            "name": "Store #138 - NEW LOUDON",
+            "address": "873 New Loudon Road, Latham, New York, 12110",
+            "lat": 42.7477,
+            "lng": -73.7601,
+            "highways": [
+                    "Route 7"
+            ],
+            "pdfDirections": [
+                    "Turn r..."
+            ]
+    },
+    "139": {
+            "name": "Store #139 - NEW AMSTERDAM",
+            "address": "141 Sanford Farms Shopping Center, Amsterdam, New York, 12010",
+            "lat": 43.25,
+            "lng": -73.45,
+            "highways": [
+                    "Route 7",
+                    "I-90"
+            ],
+            "pdfDirections": [
+                    "Route 7 West to NYS Thruway Exit 25-A.",
+                    "Take I-90 West.",
+                    "Proceed to Exit 27.",
+                    "Turn right.",
+                    "on to Route 30 North to Amsterdam."
+            ]
+    },
+    "140": {
+            "name": "Store #140 - PITTSFIELD",
+            "address": "555 Hubbard Ave., Pittsfield, Massachusetts, 01201",
+            "lat": 42.4501,
+            "lng": -73.2453,
+            "highways": [
+                    "Route 7",
+                    "I-90",
+                    "Route 2",
+                    "Route 20"
+            ],
+            "pdfDirections": [
+                    "Route 7 West to NYS Thruway Exit 25-A.",
+                    "Take I-90 East.",
+                    "Proceed to Exit 24 (Albany).",
+                    "Take I-90 East to Exit 11-E (Route 20 East)."
+            ]
+    },
+    "142": {
+            "name": "Store #142 - VAILS GATE",
+            "address": "Vails Gate Shopping Center, New Windsor, New York, 12553",
+            "lat": 41.4904,
+            "lng": -74.0818,
+            "highways": [
+                    "Route 7"
+            ],
+            "pdfDirections": [
+                    "Route 7 West to Exit 25-A.",
+                    "Proceed East to Newburgh Exit 17."
+            ]
+    },
+    "148": {
+            "name": "Store #148 - PARK AVENUE",
+            "address": "221-223 Park Avenue, Worcester, Massachusetts, 01609",
+            "lat": 43.199999999999996,
+            "lng": -73.5,
+            "highways": [
+                    "I-90",
+                    "Route 9"
+            ],
+            "pdfDirections": [
+                    "I90 East to MASS Turnpike.",
+                    "I90 East to Exit 90.",
+                    "I290 East to Exit 21.",
+                    "Route 9 West 1 1/2.",
+                    "Turn right on Park Avenue."
+            ]
+    },
+    "150": {
+            "name": "Store #150 - SPENCER",
+            "address": "33 Main Street, Spencer Shop Village, Spencer, Massachusetts",
+            "lat": 42.8,
+            "lng": -73.9,
+            "highways": [
+                    "I-90",
+                    "Route 9",
+                    "Route 4",
+                    "Route 2",
+                    "Route 20"
+            ],
+            "pdfDirections": [
+                    "Take I90 East to MASS Turnpike to Exit 78.",
+                    "Follow Route 20 East to Route 49 North to.",
+                    "Route 9 East to Spencer.",
+                    "Turn left ..."
+            ]
+    },
+    "151": {
+            "name": "Store #151 - SUNDERLAND ROAD",
+            "address": "29 Sunderland Road, Worcester, Massachusetts, 01604",
+            "lat": 42.849999999999994,
+            "lng": -73.85000000000001,
+            "highways": [
+                    "I-90"
+            ],
+            "pdfDirections": [
+                    "Take I90 East to MASS Turnpike.",
+                    "I90 East to Exit 96.",
+                    "Turn le..."
+            ]
+    },
+    "155": {
+            "name": "Store #155 - GREAT BARRINGTON",
+            "address": "300 Stockbridge Road, Gt. Barrington, MA 01230",
+            "lat": 43.05,
+            "lng": -73.65,
+            "highways": [
+                    "Route 7",
+                    "I-90"
+            ],
+            "pdfDirections": [
+                    "Route 7 West to NYS Thruway Exit 25-A.",
+                    "Take I-90 East.",
+                    "Proceed to Exit 24 (Albany).",
+                    "Take I-90 East past Exit 12 and re-enter NYS Thruway (E..."
+            ]
+    },
+    "156": {
+            "name": "Store #156 - TORRINGTON",
+            "address": "990 Torringford Street Route 183, Torrington, CT 06790",
+            "lat": 43.099999999999994,
+            "lng": -73.60000000000001,
+            "highways": [
+                    "Route 7",
+                    "I-90"
+            ],
+            "pdfDirections": [
+                    "990 Torringford Street Route 183.",
+                    "Route 7 West to NYS Thruway Exit 25-A.",
+                    "Take I-90 East.",
+                    "Proceed to Exit 24 (Albany).",
+                    "I-90 East past Exit 12 and re-enter NYS Th..."
+            ]
+    },
+    "157": {
+            "name": "Store #157 - GRANVILLE",
+            "address": "8648 State Route 22 Suite 1, Granville, New York 12832, Take I87-North to Exit 20. Turn left at bottom of ramp on to Route 9 North. Proceed on",
+            "lat": 43.15,
+            "lng": -73.55000000000001,
+            "highways": [
+                    "Route 7",
+                    "I-90",
+                    "I-87",
+                    "Route 2"
+            ],
+            "pdfDirections": [
+                    "8648 State Route 22 Suite 1.",
+                    "Route 7 West to NYS Thruway Exit 25-A.",
+                    "Take I-90 East.",
+                    "Proceed to Exit 24 (Albany).",
+                    "Take I87-North to Exit 20.",
+                    "Turn left at bottom ..."
+            ]
+    },
+    "159": {
+            "name": "Store #159 - BETHLEHEM",
+            "address": "1395 New Scotland Road (Rt. 85), Slingerlands, New York 12159, Take Route 7 West to I90 (NYS Thruway) east to Exit 24.",
+            "lat": 43.25,
+            "lng": -73.45,
+            "highways": [
+                    "Route 7",
+                    "I-90"
+            ],
+            "pdfDirections": [
+                    "Take Route 7 West to I90 (NYS Thruway) east to Exit 24.",
+                    "Exit and proceed on I-90 East to Exit 4 (Rt."
+            ]
+    },
+    "161": {
+            "name": "Store #161 - NORWICH",
+            "address": "5631 State Highway 12, Norwich, New York, 13815",
+            "lat": 42.849999999999994,
+            "lng": -73.85000000000001,
+            "highways": [],
+            "pdfDirections": [
+                    "Take I-88 West to Exit 9.",
+                    "Proceed on Route 8 North to County Route 35.( Flashing Yellow.",
+                    "Light ) Turn left on to County Route 35."
+            ]
+    },
+    "162": {
+            "name": "Store #162 - MARLBORO",
+            "address": "240 East Main Street, Marlboro, Massachusetts, 01752",
+            "lat": 42.9,
+            "lng": -73.80000000000001,
+            "highways": [
+                    "I-90",
+                    "Route 2",
+                    "Route 20"
+            ],
+            "pdfDirections": [
+                    "I90 East to MASS Turnpike, Exit 106.",
+                    "Take I-495 North to Exit 63A, Route 20 East.",
+                    "Route 20 East through Marlboro until you see ..."
+            ]
+    },
+    "164": {
+            "name": "Store #164 - PALATINE BRIDGE",
+            "address": "6025 NYS Route 5, Palatine Bridge, New York, 13428",
+            "lat": 43.0,
+            "lng": -73.7,
+            "highways": [
+                    "Route 7",
+                    "I-90",
+                    "Route 5"
+            ],
+            "pdfDirections": [
+                    "6025 NYS Route 5.",
+                    "Route 7 West to NYS Thruway Exit 25-A.",
+                    "Take I-90 West.",
+                    "Proceed to Exit 29."
+            ]
+    },
+    "165": {
+            "name": "Store #165 - SHELBURNE ROAD",
+            "address": "595 Shelburne Road, Burlington, Vermont, 05401",
+            "lat": 43.05,
+            "lng": -73.65,
+            "highways": [
+                    "Route 7",
+                    "I-90",
+                    "I-87"
+            ],
+            "pdfDirections": [
+                    "Route 7 West to NYS Thruway Exit 25-A.",
+                    "Take I-90 East.",
+                    "Proceed to Exit 24 (Albany).",
+                    "Take I-87 North to Exit 20.",
+                    "Turn left at bottom of ramp ..."
+            ]
+    },
+    "166": {
+            "name": "Store #166 - MALONE",
+            "address": "53 Finney Blvd., Malone, New York, 12953",
+            "lat": 43.099999999999994,
+            "lng": -73.60000000000001,
+            "highways": [
+                    "Route 7",
+                    "I-90",
+                    "I-87"
+            ],
+            "pdfDirections": [
+                    "Route 7 West to NYS Thruway Exit 25-A.",
+                    "Take I-90 East.",
+                    "Proceed to Exit 24 (Albany).",
+                    "Take I87-North to Exit 37.",
+                    "Turn left at top of ramp on to Rout..."
+            ]
+    },
+    "167": {
+            "name": "Store #167 - WEST LEBANON",
+            "address": "285 Plainfield Rd., West Lebanon, New Hampshire, 03784",
+            "lat": 43.15,
+            "lng": -73.55000000000001,
+            "highways": [
+                    "Route 7"
+            ],
+            "pdfDirections": [
+                    "Route 7 East, bear left onto Altamont Avenue."
+            ]
+    },
+    "168": {
+            "name": "Store #168 - PLATTSBURGH",
+            "address": "19 Centre Drive, Plattsburgh, New York, 12901",
+            "lat": 43.199999999999996,
+            "lng": -73.5,
+            "highways": [
+                    "Route 7",
+                    "I-90",
+                    "I-87"
+            ],
+            "pdfDirections": [
+                    "Route 7 West to NYS Thruway Exit 25-A.",
+                    "Take I-90 East.",
+                    "Proceed to Exit 24 (Albany).",
+                    "Take I-87 North to Exit 37."
+            ]
+    },
+    "170": {
+            "name": "Store #170 - LAKE GEORGE",
+            "address": "Amherst & Iroquois Street, Lake George, New York, 12845",
+            "lat": 42.8,
+            "lng": -73.9,
+            "highways": [
+                    "Route 7",
+                    "I-90",
+                    "I-87"
+            ],
+            "pdfDirections": [
+                    "Route 7 West to NYS Thruway Exit 25-A.",
+                    "Take I-90 East.",
+                    "Proceed to Exit 24 (Albany).",
+                    "I-87 North to Exit 21 (Lake George)."
+            ]
+    },
+    "171": {
+            "name": "Store #171 - BENNINGTON",
+            "address": "Monument Plaza, 214 Northside Drive, Bennington, Vermont",
+            "lat": 42.849999999999994,
+            "lng": -73.85000000000001,
+            "highways": [
+                    "Route 7"
+            ],
+            "pdfDirections": [
+                    "Route 7 East, bear left on to Altamont Avenue."
+            ]
+    },
+    "173": {
+            "name": "Store #173 - WYOMING",
+            "address": "Midway Shop Center, 1026 Wyoming Ave., Wyoming, Pennsylvania",
+            "lat": 42.949999999999996,
+            "lng": -73.75,
+            "highways": [
+                    "Route 7"
+            ],
+            "pdfDirections": [
+                    "Route 7 West to I-88 West to I-81 South to Exit 170-B.",
+                    "Proceed on Route 309 North to Exit."
+            ]
+    },
+    "174": {
+            "name": "Store #174 - WESTERN LIGHTS",
+            "address": "4713 Onondaga Boulevard, Syracuse, New York, 13219",
+            "lat": 43.0,
+            "lng": -73.7,
+            "highways": [
+                    "Route 7",
+                    "I-90"
+            ],
+            "pdfDirections": [
+                    "Route 7 West to NYS Thruway Exit 25-A.",
+                    "Take I-90 West.",
+                    "Proceed to Exit 34A.",
+                    "Follow I-.",
+                    "481 South to Exit 4 (East Syracuse).",
+                    "Take I-690 We..."
+            ]
+    },
+    "180": {
+            "name": "Store #180 - LAKE PLACID",
+            "address": "1930 Saranac Avenue, Lake Placid, New York, 12946",
+            "lat": 42.8,
+            "lng": -73.9,
+            "highways": [
+                    "Route 7",
+                    "I-90",
+                    "I-87"
+            ],
+            "pdfDirections": [
+                    "Route 7 West to NYS Thruway Exit 25-A.",
+                    "Take I-90 East.",
+                    "Proceed to Exit 24 (Albany).",
+                    "I-87 North to Exit 30.",
+                    "Turn left onto Rt."
+            ]
+    },
+    "181": {
+            "name": "Store #181 - HUDSON VALLEY PLAZA",
+            "address": "79 Vandenburg Avenue( Route 4), Troy, New York, 12180",
+            "lat": 42.849999999999994,
+            "lng": -73.85000000000001,
+            "highways": [
+                    "Route 7",
+                    "I-90",
+                    "Route 4"
+            ],
+            "pdfDirections": [
+                    "79 Vandenburg Avenue( Route 4).",
+                    "Route 7 West to NYS Thruway Exit 25-A.",
+                    "Take I-90 East.",
+                    "Proceed to Exit 24 (Albany).",
+                    "Take I-90 East to Exit 8 (Route 43).",
+                    "Turn left on..."
+            ]
+    },
+    "183": {
+            "name": "Store #183 - JOHNSTON ROAD",
+            "address": "1706 Western Ave, Guilderland, New York, 12084",
+            "lat": 42.949999999999996,
+            "lng": -73.75,
+            "highways": [
+                    "Route 7",
+                    "Route 2",
+                    "Route 20"
+            ],
+            "pdfDirections": [
+                    "Turn right onto Guilderland Avenue (Route 158).",
+                    "Continue to Route 20.",
+                    "Turn left on to Route 20-East."
+            ]
+    },
+    "184": {
+            "name": "Store #184 - MALTA",
+            "address": "1 Kendall Way, Shops of Malta, Malta, New York",
+            "lat": 43.0,
+            "lng": -73.7,
+            "highways": [
+                    "Route 7"
+            ],
+            "pdfDirections": [
+                    "Directions not available - use navigation app"
+            ]
+    },
+    "185": {
+            "name": "Store #185 - MONTROSE",
+            "address": "Montrose, PA., 18801, 223. Turn left onto Route 492 and proceed 1 mile to Route 11. Turn left onto Route 11",
+            "lat": 43.05,
+            "lng": -73.65,
+            "highways": [
+                    "Route 7",
+                    "Route 4"
+            ],
+            "pdfDirections": [
+                    "Routes 706 RFD#3.",
+                    "Route 7 West to I-88 West to I-81 South.",
+                    "Follow I-81 South into Pennsylvania.",
+                    "Take Exit.",
+                    "Turn left onto Route 492 and proceed 1 mile to Route 11..."
+            ]
+    },
+    "188": {
+            "name": "Store #188 - SHAKER RD",
+            "address": "Albany Shaker Road, Loudonville, New York, 12211",
+            "lat": 43.199999999999996,
+            "lng": -73.5,
+            "highways": [
+                    "Route 7",
+                    "I-90",
+                    "I-87"
+            ],
+            "pdfDirections": [
+                    "Route 7 West to NYS Thruway Exit 25-A.",
+                    "Take I-90 East.",
+                    "Proceed to Exit 24 (Albany).",
+                    "Proceed on I-90 to I87 North (Exit 4) left off exit on..."
+            ]
+    },
+    "189": {
+            "name": "Store #189 - PUTNAM",
+            "address": "Putnam Shopping Center, 251 Kennedy Drive, Putnam, Ct. 06260",
+            "lat": 43.25,
+            "lng": -73.45,
+            "highways": [
+                    "I-90"
+            ],
+            "pdfDirections": [
+                    "Turnpike, continue on I90 East / Mass.",
+                    "Turnpike to Exit 90,.",
+                    "(Exit 90 \u2013 Auburn, Worcester / I395, Rt.12, I290).Exit..."
+            ]
+    },
+    "190": {
+            "name": "Store #190 - EDWARDSVILLE",
+            "address": "180 Westside Mall, Edwardsville, Pennsylvania, 18704-3117",
+            "lat": 42.8,
+            "lng": -73.9,
+            "highways": [
+                    "Route 7"
+            ],
+            "pdfDirections": [
+                    "Route 7 West to I-88 to Route 81 South to Exit 170-B.",
+                    "Proceed on Route 309 North to Exit.",
+                    "At Exit 4, bear right and then bear l..."
+            ]
+    },
+    "192": {
+            "name": "Store #192 - ESSEX CENTER",
+            "address": "90 Center Road, Essex Junction, Vermont 05452, Take I-87 North to Exit 20. Turn left at bottom of ramp onto Route 9 North. Proceed on Route 9",
+            "lat": 42.9,
+            "lng": -73.80000000000001,
+            "highways": [
+                    "Route 7",
+                    "I-90",
+                    "I-87"
+            ],
+            "pdfDirections": [
+                    "Route 7 West to NYS Thruway Exit 25-A.",
+                    "Take I-90 East.",
+                    "Proceed to Exit 24 (Albany).",
+                    "Take I-87 North to Exit 20.",
+                    "Turn left at bottom of ramp ..."
+            ]
+    },
+    "193": {
+            "name": "Store #193 - SAUGERTIES",
+            "address": "138 Ulster Avenue, Saugerties, New York, 12477",
+            "lat": 42.949999999999996,
+            "lng": -73.75,
+            "highways": [
+                    "Route 7",
+                    "I-90",
+                    "I-87"
+            ],
+            "pdfDirections": [
+                    "Route 7 West to I-90 East (NYS Thruway) to I-87 South.",
+                    "Proceed to Exit 20 (Saugerties).",
+                    "Take Route 32 South."
+            ]
+    },
+    "194": {
+            "name": "Store #194 - MOUNTAIN STREET/PULLMAN STREET",
+            "address": "72 Pullman Street, Worcester, MA, 01606",
+            "lat": 43.0,
+            "lng": -73.7,
+            "highways": [
+                    "I-90",
+                    "I-190"
+            ],
+            "pdfDirections": [
+                    "Proceed on I-90 East (Mass Pike) to Exit 90.",
+                    "Proceed to I-290 East to I-190 North to Exit.",
+                    "At Exit 2 (Ararat Street) follow Service Road North (F..."
+            ]
+    },
+    "198": {
+            "name": "Store #198 - NEWBURGH",
+            "address": "39 North Plank Road, Newburgh, New York, 12550",
+            "lat": 43.199999999999996,
+            "lng": -73.5,
+            "highways": [
+                    "Route 7",
+                    "I-90",
+                    "I-87",
+                    "I-84"
+            ],
+            "pdfDirections": [
+                    "Route 7 West to NYS Thruway Exit 25-A.",
+                    "Take I-90 East to I-87 South to Exit 17.",
+                    "to I-84 East.",
+                    "Take I-84 East to Exit 10."
+            ]
+    },
+    "199": {
+            "name": "Store #199 - CICERO",
+            "address": "5701 E. Circle Drive \u2013 Suite 100, Cicero, New York, 13039",
+            "lat": 43.25,
+            "lng": -73.45,
+            "highways": [
+                    "Route 7",
+                    "I-90"
+            ],
+            "pdfDirections": [
+                    "Route 7 West to NYS Thruway Exit 25-A.",
+                    "Take I-90 West.",
+                    "Proceed to Exit 34-A.",
+                    "Follow I-.",
+                    "481 North to Exit 10 (East Circle Drive)."
+            ]
+    },
+    "202": {
+            "name": "Store #202 - WESTFALL",
+            "address": "1025 Pennsylvania Ave., Matamoras, PA, 18336",
+            "lat": 42.9,
+            "lng": -73.80000000000001,
+            "highways": [
+                    "Route 7",
+                    "I-90",
+                    "I-87"
+            ],
+            "pdfDirections": [
+                    "Route 7 West to NYS Thruway Exit 25-A, Take I-90 East and continue on I-87 south,.",
+                    "Follow I87 (NYS Thruway) south to Exit 17, Exit and follow t..."
+            ]
+    },
+    "203": {
+            "name": "Store #203 - SOUTHINGTON",
+            "address": "410 Queen Street, Southington, CT, 06489",
+            "lat": 42.949999999999996,
+            "lng": -73.75,
+            "highways": [
+                    "Route 7",
+                    "I-90"
+            ],
+            "pdfDirections": [
+                    "Route 7 West to NYS Thruway Exit 25-A.",
+                    "Proceed on I-90 East to Exit 24 (Albany).",
+                    "on I-90 East past Exit 12 and re-enter NYS Thruway (B-1) ..."
+            ]
+    },
+    "204": {
+            "name": "Store #204 - BRISTOL",
+            "address": "121 Farmington Ave., Bristol, CT 06010",
+            "lat": 43.0,
+            "lng": -73.7,
+            "highways": [
+                    "Route 7",
+                    "I-90"
+            ],
+            "pdfDirections": [
+                    "Route 7 West to NYS Thruway Exit 25-A.",
+                    "Proceed on I-90 East to Exit 24 (Albany).",
+                    "Proceed on I-90 East past Exit 12 and re-enter NYS Thruway (B-1) to..."
+            ]
+    },
+    "205": {
+            "name": "Store #205 - VERNON",
+            "address": "35 Talcottville Road, Vernon, CT 06066",
+            "lat": 43.05,
+            "lng": -73.65,
+            "highways": [
+                    "Route 7",
+                    "I-90"
+            ],
+            "pdfDirections": [
+                    "Route 7 West to NYS Thruway Exit 25-A.",
+                    "Take I-90 East.",
+                    "Proceed to Exit 24 (Albany), exit.",
+                    "and continue on I-90.",
+                    "Take I-90 E..."
+            ]
+    },
+    "206": {
+            "name": "Store #206 - NEW ROME",
+            "address": "1790 Black River Blvd., Rome, NY, 13440",
+            "lat": 43.099999999999994,
+            "lng": -73.60000000000001,
+            "highways": [
+                    "Route 7",
+                    "I-90"
+            ],
+            "pdfDirections": [
+                    "Route 7 West to NYS Thruway Exit 25A.",
+                    "Take I-90 West.",
+                    "Proceed to Exit 31 (Utica).",
+                    "Turn right on ..."
+            ]
+    },
+    "207": {
+            "name": "Store #207 - COMMERCIAL DRIVE",
+            "address": "4535 Commercial Drive, New Hartford, NY, 13413",
+            "lat": 43.15,
+            "lng": -73.55000000000001,
+            "highways": [
+                    "Route 7",
+                    "I-90"
+            ],
+            "pdfDirections": [
+                    "Route 7 West to NYS Thruway Exit 25-a.",
+                    "Take I-90 West.",
+                    "Proceed to Exit 31.",
+                    "From Exit."
+            ]
+    },
+    "208": {
+            "name": "Store #208 - KEENE",
+            "address": "16 Ashbrook Road, Keene, New Hampshire, 03431, Chrisler Ave. (first right after railroad overpass). Turn right onto Chrisler Ave. to Route 7",
+            "lat": 43.199999999999996,
+            "lng": -73.5,
+            "highways": [
+                    "Route 7"
+            ],
+            "pdfDirections": [
+                    "Route 7 East, bear left onto Altamont Avenue.",
+                    "Turn ..."
+            ]
+    },
+    "209": {
+            "name": "Store #209 - NEWINGTON",
+            "address": "2985 Berlin Turnpike, Newington, CT, 06111",
+            "lat": 43.25,
+            "lng": -73.45,
+            "highways": [
+                    "Route 7",
+                    "I-90"
+            ],
+            "pdfDirections": [
+                    "2985 Berlin Turnpike.",
+                    "Route 7 West to NYS Thruway Exit 25-A.",
+                    "Proceed on I-90 East to Exit 24 (Albany).",
+                    "on I-90 East past Exit 12 and re-enter NYS Thruway to M..."
+            ]
+    },
+    "210": {
+            "name": "Store #210 - RICHFIELD SPRINGS",
+            "address": "1 Main Street, Richfield Springs, N.Y.13439, Follow Route 20 West into Richfield Springs, Price Chopper will be on the right side after",
+            "lat": 42.8,
+            "lng": -73.9,
+            "highways": [
+                    "Route 7",
+                    "Route 2",
+                    "Route 20"
+            ],
+            "pdfDirections": [
+                    "Route 7 West to Duanesburg, NY.",
+                    "In Duanesburg, turn right onto Route 20 West,.",
+                    "Follow Route 20 West into Richfield Springs, Price Chopper will ..."
+            ]
+    },
+    "213": {
+            "name": "Store #213 - NEW ONEIDA",
+            "address": "142 Genesee Street (Route-5), Oneida, NY 13421",
+            "lat": 42.949999999999996,
+            "lng": -73.75,
+            "highways": [
+                    "I-90",
+                    "Route 5",
+                    "Route 365"
+            ],
+            "pdfDirections": [
+                    "142 Genesee Street (Route-5).",
+                    "Take I-90 (NYS Thruway) West to Exit 33.",
+                    "Proceed to stop light and turn left onto Route.",
+                    "Proceed on Route 365 West to Route 5.",
+                    "Turn..."
+            ]
+    },
+    "214": {
+            "name": "Store #214 - NEW FULTON",
+            "address": "12 West First Street \u2013 South (Route 48), Fulton, NY 13069",
+            "lat": 43.0,
+            "lng": -73.7,
+            "highways": [
+                    "I-90",
+                    "Route 4"
+            ],
+            "pdfDirections": [
+                    "12 West First Street \u2013 South (Route 48).",
+                    "Take I-90 (NYS Thruway) West to Exit 34-A.",
+                    "At Exit 34-A take Route 481 North into Fulton."
+            ]
+    },
+    "215": {
+            "name": "Store #215 - SIDNEY",
+            "address": "165 Delaware Street, Sidney, N.Y. 13838, Rte. 7 West to I88 West to exit 9 (Rte.8).Turn right off exit ramp onto Route 8 north,",
+            "lat": 43.05,
+            "lng": -73.65,
+            "highways": [
+                    "Route 7"
+            ],
+            "pdfDirections": [
+                    "7 West to I88 West to exit 9 (Rte.8).Turn right off exit ramp onto Route 8 north,."
+            ]
+    },
+    "216": {
+            "name": "Store #216 - OWEGO FAIR",
+            "address": "42 West Main Street (Rt.17C), Owego, N.Y. 13827, Take I88 West from Rotterdam towards Binghamton, N.Y. Continue on I88 to the end and",
+            "lat": 43.099999999999994,
+            "lng": -73.60000000000001,
+            "highways": [],
+            "pdfDirections": [
+                    "Directions not available - use navigation app"
+            ]
+    },
+    "218": {
+            "name": "Store #218 - DELHI",
+            "address": "3 Main Street (Rt. 10), Delhi, N.Y. 13753, Take Route 7 west to I88.Take I88 west to Exit 20 / Richmondville. Exit and follow to",
+            "lat": 43.199999999999996,
+            "lng": -73.5,
+            "highways": [
+                    "Route 7"
+            ],
+            "pdfDirections": [
+                    "Take Route 7 west to I88.Take I88 west to Exit 20 / Richmondville.",
+                    "Exit and follow to.",
+                    "Follow Route 10 south into Delhi."
+            ]
+    },
+    "219": {
+            "name": "Store #219 - DERBY",
+            "address": "56 Commons Drive, Derby, Vt. 05829, east. Follow Route 7 east thru Troy, N.Y. and into Vermont (highway changes to Rte.279",
+            "lat": 43.25,
+            "lng": -73.45,
+            "highways": [
+                    "Route 7"
+            ],
+            "pdfDirections": [
+                    "Route 7 east, bear left onto Altamont Avenue, Follow Altamont Avenue to Chrisler Avenue.",
+                    "(first right after railroad overpass),Turn right on to Chrisler..."
+            ]
+    },
+    "220": {
+            "name": "Store #220 - CHAMPLAIN",
+            "address": "860 Route 11, Champlain, N.Y. 12919, Take Route 7 west to NYS Thruway Exit 25A.Take I90 east to Exit 24 (Albany),",
+            "lat": 42.8,
+            "lng": -73.9,
+            "highways": [
+                    "Route 7",
+                    "I-90",
+                    "I-87"
+            ],
+            "pdfDirections": [
+                    "Take Route 7 west to NYS Thruway Exit 25A.Take I90 east to Exit 24 (Albany),.",
+                    "Exit and take I87 north.",
+                    "Follow I87 north to Exit 42 (Mooers, Rouses Poin..."
+            ]
+    },
+    "221": {
+            "name": "Store #221 - NEW WINDSOR",
+            "address": "675 Poquonock Ave. / Rt. 75, Windsor, Ct. 06095, Take I90 East to the Mass. Turnpike. Continue on I90 East / Mass. Turnpike to Exit 45,",
+            "lat": 42.849999999999994,
+            "lng": -73.85000000000001,
+            "highways": [
+                    "I-90"
+            ],
+            "pdfDirections": [
+                    "Turnpike.",
+                    "Turnpike to Exit 45,.",
+                    "(Exit 45 \u2013 Springfield / I91, Rt.",
+                    "Exit and sta..."
+            ]
+    },
+    "222": {
+            "name": "Store #222 - NEW WILKES BARRE",
+            "address": "245 Wilkes-Barre Township Blvd., Wilkes Barre, PA. 18702, Take Rte. 7 West to I88 West. Follow I88 West to I81 South, Continue on I81 South into",
+            "lat": 42.9,
+            "lng": -73.80000000000001,
+            "highways": [
+                    "Route 7"
+            ],
+            "pdfDirections": [
+                    "Follow I81 South to Exit 168..."
+            ]
+    },
+    "223": {
+            "name": "Store #223 - WARWICK",
+            "address": "142 State Rte. 94, Warwick, NY 10990",
+            "lat": 42.949999999999996,
+            "lng": -73.75,
+            "highways": [
+                    "Route 7",
+                    "I-90",
+                    "I-87",
+                    "I-84"
+            ],
+            "pdfDirections": [
+                    "7 West to NYS Thruway Exit 25A.",
+                    "Take I-90 East and continue onto I-87 South.",
+                    "to Exit 17(Newburgh/ I-84).",
+                    "Follow I-84 West approx."
+            ]
+    },
+    "224": {
+            "name": "Store #224 - COLONIE",
+            "address": "1892 Central Avenue, Albany, NY 12205",
+            "lat": 43.0,
+            "lng": -73.7,
+            "highways": [
+                    "Route 7"
+            ],
+            "pdfDirections": [
+                    "Turn right ..."
+            ]
+    },
+    "225": {
+            "name": "Store #225 - COLGATE",
+            "address": "1050 Madison Market Place (Rt. 12B), Hamilton, N. Y. 13346, Take I90 West (N.Y.S. Thruway) to Exit 31,",
+            "lat": 43.05,
+            "lng": -73.65,
+            "highways": [
+                    "Route 7",
+                    "I-90",
+                    "Route 5"
+            ],
+            "pdfDirections": [
+                    "Thruway) to Exit 31,.",
+                    "Exit and bear right to onto Genessee St."
+            ]
+    },
+    "226": {
+            "name": "Store #226 - NORTH OSWEGO",
+            "address": "137 State Route 104, Oswego, NY 13126",
+            "lat": 43.099999999999994,
+            "lng": -73.60000000000001,
+            "highways": [
+                    "I-90",
+                    "Route 4"
+            ],
+            "pdfDirections": [
+                    "137 State Route 104.",
+                    "Take I-90 (NYS Thruway) West to Exit 34-A, to Route 481 North.",
+                    "Follow Route 481 North.",
+                    "In Oswego turn right onto Route 104 East (Bridge St..."
+            ]
+    },
+    "227": {
+            "name": "Store #227 - LEBANON",
+            "address": "370 Miracle Mile Rd., Lebanon, N. H. 03766, Take I90 East (N.Y.S. Thruway) to Exit 24. Exit and take I87 North to Exit 7,Exit and follow",
+            "lat": 43.15,
+            "lng": -73.55000000000001,
+            "highways": [
+                    "Route 7",
+                    "I-90",
+                    "I-87"
+            ],
+            "pdfDirections": [
+                    "Thruway) to Exit 24.",
+                    "Exit and take I87 North to Exit 7,Exit and follow.",
+                    "Route 7 East into Vermont.",
+                    "Follow Route 7 East to ..."
+            ]
+    },
+    "228": {
+            "name": "Store #228 - SOUTH BURLINGTON",
+            "address": "Commerce Square Shopping Center, Hinesburg Road, South Burlington, Vt.",
+            "lat": 43.199999999999996,
+            "lng": -73.5,
+            "highways": [
+                    "I-90",
+                    "I-87"
+            ],
+            "pdfDirections": [
+                    "Thruway) to Exit 24 (Albany), Exit and take I87 North to Exit 20, Exit and turn."
+            ]
+    },
+    "229": {
+            "name": "Store #229 - SHREWSBURY",
+            "address": "731 Boston Turnpike (Rte. 9), Shrewsbury, MA 01545",
+            "lat": 43.25,
+            "lng": -73.45,
+            "highways": [
+                    "Route 7",
+                    "I-90",
+                    "Route 9"
+            ],
+            "pdfDirections": [
+                    "731 Boston Turnpike (Rte.",
+                    "7 West to I-90 West (NYS Thruway) to Exit 24.",
+                    "Take I-90 East to Berkshire Spur to.",
+                    "Turnpike.",
+                    "Follow to Exit 96 (Rte.122 Millb..."
+            ]
+    },
+    "230": {
+            "name": "Store #230 - COLCHESTER",
+            "address": "1184 Prim Road, Colchester, Vt. 05446, Take I90 East (N.Y.S. Thruway) to Exit 24 (Albany). Exit and take I87 North to Exit 20.",
+            "lat": 42.8,
+            "lng": -73.9,
+            "highways": [
+                    "I-90",
+                    "I-87"
+            ],
+            "pdfDirections": [
+                    "Thruway) to Exit 24 (Albany).",
+                    "Exit and take I87 North to Exit 20.",
+                    "Exit and turn left onto Rt."
+            ]
+    },
+    "234": {
+            "name": "Store #234 - CHENANGO BRIDGE",
+            "address": "33 Chenango Rd (Rte. 12A), Chenango, NY 13745",
+            "lat": 43.0,
+            "lng": -73.7,
+            "highways": [
+                    "Route 7"
+            ],
+            "pdfDirections": [
+                    "7 West to I-88 West toward Binghamton."
+            ]
+    },
+    "235": {
+            "name": "Store #235 - COOPERSTOWN",
+            "address": "113 Chestnut St. (Rte. 28), Cooperstown, NY 13326",
+            "lat": 43.05,
+            "lng": -73.65,
+            "highways": [
+                    "Route 7",
+                    "Route 20"
+            ],
+            "pdfDirections": [
+                    "Directions not available - use navigation app"
+            ]
+    },
+    "237": {
+            "name": "Store #237 - BINGHAMTON",
+            "address": "10 Glenwood Ave., Binghamton, NY 13905",
+            "lat": 43.15,
+            "lng": -73.55000000000001,
+            "highways": [
+                    "Route 7"
+            ],
+            "pdfDirections": [
+                    "7 West to I-88 West toward Binghamton.",
+                    "Follow I-88 to the end to I- 81 South.",
+                    "Follow I-81 south to Rte.",
+                    "17 West (I-96) to exit 71S onto Airpor..."
+            ]
+    },
+    "239": {
+            "name": "Store #239 - GARDNER",
+            "address": "560 Main St., Gardner, MA 01440",
+            "lat": 43.25,
+            "lng": -73.45,
+            "highways": [
+                    "Route 7",
+                    "I-90"
+            ],
+            "pdfDirections": [
+                    "7 West to I-90 East (NYS thruway), to exit 24.",
+                    "Take I-90 East to the Berkshire Spur.",
+                    "Take exit 45 (I-91/ Springfield) and get on I-..."
+            ]
+    },
+    "240": {
+            "name": "Store #240 - WEBSTER",
+            "address": "2 Worcester Road, Webster, MA 01570",
+            "lat": 42.8,
+            "lng": -73.9,
+            "highways": [
+                    "Route 7",
+                    "I-90"
+            ],
+            "pdfDirections": [
+                    "7 West to I-90 East NYS Thruway) to exit 24.",
+                    "Take I-90 East to the end, to the."
+            ]
+    },
+    "241": {
+            "name": "Store #241 - ALEXANDRIA BAY",
+            "address": "43449 State Rte. 12, Alexandria bay, NY 13607",
+            "lat": 42.849999999999994,
+            "lng": -73.85000000000001,
+            "highways": [
+                    "Route 7",
+                    "I-90"
+            ],
+            "pdfDirections": [
+                    "7 West to I-90 West (NYS Thruway), to exit 31 (Utica)."
+            ]
+    },
+    "242": {
+            "name": "Store #242 - LITTLE FALLS",
+            "address": "555 East Main St., Little Falls, NY 13365",
+            "lat": 42.9,
+            "lng": -73.80000000000001,
+            "highways": [
+                    "Route 7",
+                    "I-90",
+                    "Route 5"
+            ],
+            "pdfDirections": [
+                    "7 west to I-90 West (NYS Thruway) to exit 29A (little Falls)."
+            ]
+    },
+    "243": {
+            "name": "Store #243 - STORRS",
+            "address": "1220 Storrs Rd. (Rte. 195), Mansfield, Ct 06268, Rte. 7 West to I-90 East (NYS Thruway) to exit 24. Continue on I-90 East to the",
+            "lat": 42.949999999999996,
+            "lng": -73.75,
+            "highways": [
+                    "Route 7",
+                    "I-90"
+            ],
+            "pdfDirections": [
+                    "7 West to I-90 East (NYS Thruway) to exit 24.",
+                    "Continue on I-90 East to the."
+            ]
+    },
+    "244": {
+            "name": "Store #244 - SUTTON",
+            "address": "21 Galaxy Pass, Sutton, MA. 01590, Rte. 7 West to I-90 East (NYS Thruway) to exit 24. Take I-90 East to the Berkshire Spur",
+            "lat": 43.0,
+            "lng": -73.7,
+            "highways": [
+                    "Route 7",
+                    "I-90"
+            ],
+            "pdfDirections": [
+                    "7 West to I-90 East (NYS Thruway) to exit 24.",
+                    "Take I-90 East to the Berkshire Spur."
+            ]
+    },
+    "245": {
+            "name": "Store #245 - WATERVLIET",
+            "address": "515 19th St., Watervliet, NY 12189",
+            "lat": 43.05,
+            "lng": -73.65,
+            "highways": [
+                    "Route 7",
+                    "I-87"
+            ],
+            "pdfDirections": [
+                    "Follow signs for I-87 North and Rte."
+            ]
+    },
+    "246": {
+            "name": "Store #246 - CHATHAM",
+            "address": "2614 Route 66, Ghent, NY 12034",
+            "lat": 43.099999999999994,
+            "lng": -73.60000000000001,
+            "highways": [
+                    "Route 7",
+                    "I-90",
+                    "Route 9"
+            ],
+            "pdfDirections": [
+                    "7 West to I-90 East (NYS Thruway) to exit 24.",
+                    "Take I-90 east to exit12.",
+                    "Turn right."
+            ]
+    },
+    "247": {
+            "name": "Store #247 - WARRENSBURG",
+            "address": "16 Lake George Plaza Rd., Warrensburg, NY 12845",
+            "lat": 43.15,
+            "lng": -73.55000000000001,
+            "highways": [
+                    "I-90",
+                    "I-87"
+            ],
+            "pdfDirections": [
+                    "& West to I-90 East (NYS Thruway) to exit 24.",
+                    "Take I-87 North (Northway) to exit."
+            ]
+    },
+    "248": {
+            "name": "Store #248 - OXFORD",
+            "address": "300 oxford Rd., Oxford, CT. 06478, Rte. 7 West to I-90 East (NYS Thruway) to exit 24. Follow I-90 East to the Berkshire",
+            "lat": 43.199999999999996,
+            "lng": -73.5,
+            "highways": [
+                    "Route 7",
+                    "I-90"
+            ],
+            "pdfDirections": [
+                    "7 West to I-90 East (NYS Thruway) to exit 24.",
+                    "Follow I-90 East to the Berkshire."
+            ]
+    },
+    "249": {
+            "name": "Store #249 - FORT EDWARD",
+            "address": "354 Broadway (Rte. 4), Fort Edward, NY 12828",
+            "lat": 43.25,
+            "lng": -73.45,
+            "highways": [
+                    "Route 7",
+                    "I-90",
+                    "I-87",
+                    "Route 9",
+                    "Route 4"
+            ],
+            "pdfDirections": [
+                    "7 West to I-90 East (NYS thruway) to exit 24.",
+                    "Take I-87 North (Northway) to exit."
+            ]
+    },
+    "250": {
+            "name": "Store #250 - CLIFTON PARK",
+            "address": "Clifton Park, , NY 12065",
+            "lat": 42.8,
+            "lng": -73.9,
+            "highways": [
+                    "Route 7"
+            ],
+            "pdfDirections": [
+                    "Route 146 & Vischer Ferry.",
+                    "Route 7 East to Five Corners intersection."
+            ]
+    }
+```
+
+};
+
+```
+    var stops = [];
+
+    function addStop() {
+        stops.push(null);
+        renderStops();
+    }
+
+    function removeStop(index) {
+        stops.splice(index, 1);
+        renderStops();
+    }
+
+    function renderStops() {
+        var html = '';
+        stops.forEach(function(stop, i) {
+            html += '<div class="stop-input">' +
+                   '<div class="stop-num">STOP ' + (i + 1) + '</div>' +
+                   '<input type="text" class="code-input" placeholder="Code" maxlength="3" ' +
+                   'value="' + (stop || '') + '" onchange="updateStop(' + i + ', this.value)">' +
+                   '<button class="remove-btn" onclick="removeStop(' + i + ')">×</button>' +
+                   '</div>';
+        });
+        document.getElementById('stopsList').innerHTML = html;
+    }
+
+    function updateStop(index, value) {
+        var code = value.padStart(2, '0');
+        if (locations[code]) {
+            stops[index] = code;
+        }
+    }
+
+    function calculateRoute() {
+        var validStops = stops.filter(function(s) { return s && locations[s]; });
+        
+        if (validStops.length === 0) {
+            alert('Please add at least one stop');
+            return;
+        }
+
+        var routeData = [];
+        var totalMiles = 0;
+
+        // LEG 1: Warehouse to First Stop
+        var firstStop = locations[validStops[0]];
+        var leg1Miles = parseFloat(estimateDistance(WAREHOUSE.lat, WAREHOUSE.lng, firstStop.lat, firstStop.lng));
+        totalMiles += leg1Miles;
+
+        routeData.push({
+            type: 'warehouse-to-store',
+            from: 'Warehouse',
+            to: firstStop.name,
+            directions: firstStop.pdfDirections,
+            highways: firstStop.highways,
+            miles: leg1Miles.toFixed(1)
+        });
+
+        // MIDDLE LEGS: Store to Store (AUTO-CALCULATED)
+        for (var i = 0; i < validStops.length - 1; i++) {
+            var fromStore = locations[validStops[i]];
+            var toStore = locations[validStops[i + 1]];
+            var legMiles = parseFloat(estimateDistance(fromStore.lat, fromStore.lng, toStore.lat, toStore.lng));
+            totalMiles += legMiles;
+
+            var smartRoute = generateSmartRoute(fromStore, toStore);
+            routeData.push({
+                type: 'store-to-store',
+                from: fromStore.name,
+                to: toStore.name,
+                directions: smartRoute.directions,
+                highway: smartRoute.highway,
+                miles: legMiles.toFixed(1)
+            });
+        }
+
+        // LAST LEG: Return to Warehouse
+        var lastStop = locations[validStops[validStops.length - 1]];
+        var lastMiles = parseFloat(estimateDistance(lastStop.lat, lastStop.lng, WAREHOUSE.lat, WAREHOUSE.lng));
+        totalMiles += lastMiles;
+
+        routeData.push({
+            type: 'store-to-warehouse',
+            from: lastStop.name,
+            to: 'Warehouse',
+            directions: reverseDirections(lastStop.pdfDirections),
+            miles: lastMiles.toFixed(1)
+        });
+
+        displayRoute(routeData, totalMiles);
+    }
+
+    function calculateBearing(lat1, lon1, lat2, lon2) {
+        lat1 = lat1 * Math.PI / 180;
+        lon1 = lon1 * Math.PI / 180;
+        lat2 = lat2 * Math.PI / 180;
+        lon2 = lon2 * Math.PI / 180;
+        
+        var dlon = lon2 - lon1;
+        var x = Math.sin(dlon) * Math.cos(lat2);
+        var y = Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(dlon);
+        
+        var bearing = Math.atan2(x, y);
+        bearing = bearing * 180 / Math.PI;
+        bearing = (bearing + 360) % 360;
+        
+        return bearing;
+    }
+
+    function getDirection(bearing) {
+        var directions = ['North', 'Northeast', 'East', 'Southeast', 'South', 'Southwest', 'West', 'Northwest'];
+        var index = Math.round(bearing / 45) % 8;
+        return directions[index];
+    }
+
+    function generateSmartRoute(fromStore, toStore) {
+        var fromHighways = fromStore.highways || [];
+        var toHighways = toStore.highways || [];
+        
+        // Find common highways
+        var common = fromHighways.filter(function(h) { return toHighways.indexOf(h) !== -1; });
+        
+        if (common.length > 0) {
+            var commonHighway = common[0];
+            return {
+                highway: commonHighway,
+                directions: [
+                    'Navigate back to ' + commonHighway,
+                    'Follow ' + commonHighway + ' to destination area',
+                    'Then use PDF directions or navigation app for final approach'
+                ]
+            };
+        }
+        
+        // No common highway - calculate direction
+        var bearing = calculateBearing(fromStore.lat, fromStore.lng, toStore.lat, toStore.lng);
+        var direction = getDirection(bearing);
+        var suggestedHighway = 'I-90';
+        
+        if (direction.indexOf('North') >= 0) {
+            suggestedHighway = 'I-87 North';
+        } else if (direction.indexOf('South') >= 0) {
+            suggestedHighway = 'I-87 South';
+        } else if (direction.indexOf('East') >= 0) {
+            suggestedHighway = 'I-90 East';
+        } else {
+            suggestedHighway = 'I-90 West';
+        }
+        
+        return {
+            highway: suggestedHighway,
+            directions: [
+                'Head ' + direction.toLowerCase() + ' toward ' + toStore.name.split(' - ')[1],
+                'Take ' + suggestedHighway,
+                'Use navigation app for specific directions'
+            ]
+        };
+    }
+
+    function reverseDirections(directions) {
+        if (!Array.isArray(directions)) return ['Return via reverse route'];
+        
+        var reversed = [];
+        for (var i = directions.length - 1; i >= 0; i--) {
+            var step = directions[i];
+            step = step.replace(/Left/gi, 'TEMP_RIGHT')
+                      .replace(/Right/gi, 'Left')
+                      .replace(/TEMP_RIGHT/g, 'Right');
+            step = step.replace(/East/gi, 'TEMP_WEST')
+                      .replace(/West/gi, 'East')
+                      .replace(/TEMP_WEST/g, 'West');
+            step = step.replace(/North/gi, 'TEMP_SOUTH')
+                      .replace(/South/gi, 'North')
+                      .replace(/TEMP_SOUTH/g, 'South');
+            reversed.push(step);
+        }
+        return reversed;
+    }
+
+    function displayRoute(routeData, totalMiles) {
+        var totalMins = Math.round((totalMiles / 50) * 60);
+
+        var html = '<div class="total-stats">' +
+            '<div>TOTAL ROUTE</div>' +
+            '<div class="total-value">' + totalMiles.toFixed(1) + ' mi</div>' +
+            '<div>' + Math.floor(totalMins / 60) + 'h ' + (totalMins % 60) + 'm</div>' +
+            '</div>';
+
+        routeData.forEach(function(leg, i) {
+            var legClass = leg.type.includes('warehouse') ? 'warehouse' : 'smart';
+            var badge = leg.type === 'store-to-store' ? 
+                       '<span class="smart-badge">AUTO-CALCULATED</span>' : 
+                       '<span class="pdf-badge">PDF DIRECTIONS</span>';
+            
+            if (leg.highway) {
+                badge += ' <span class="highway-badge">' + leg.highway + '</span>';
+            }
+
+            html += '<div class="route-leg ' + legClass + '">' +
+                   '<div class="leg-header">LEG ' + (i + 1) + ': ' + leg.from + ' → ' + leg.to + '</div>' +
+                   badge;
+
+            if (leg.highways && leg.highways.length > 0) {
+                html += '<div style="margin:10px 0">';
+                leg.highways.forEach(function(hw) {
+                    html += '<span class="highway-badge">' + hw + '</span>';
+                });
+                html += '</div>';
+            }
+
+            html += '<div class="direction-list">';
+            if (Array.isArray(leg.directions)) {
+                leg.directions.forEach(function(dir) {
+                    html += '<div class="direction-item">' + dir + '</div>';
+                });
+            } else {
+                html += '<div class="direction-item">' + leg.directions + '</div>';
+            }
+            html += '</div>';
+
+            var time = Math.round((parseFloat(leg.miles) / 50) * 60);
+            html += '<div class="stat-row">' +
+                   '<div class="stat">Distance: <span class="stat-value">' + leg.miles + ' mi</span></div>' +
+                   '<div class="stat">Time: <span class="stat-value">~' + time + ' min</span></div>' +
+                   '</div></div>';
+        });
+
+        document.getElementById('results').innerHTML = html;
+        document.getElementById('results').classList.add('show');
+    }
+
+    function estimateDistance(lat1, lng1, lat2, lng2) {
+        var R = 3959;
+        var dLat = (lat2 - lat1) * Math.PI / 180;
+        var dLon = (lng2 - lng1) * Math.PI / 180;
+        var a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                Math.sin(dLon/2) * Math.sin(dLon/2);
+        var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+        return (R * c * 1.25).toFixed(1);
+    }
+
+    function clearRoute() {
+        stops = [];
+        renderStops();
+        document.getElementById('results').classList.remove('show');
+    }
+
+    addStop();
+    console.log('✅ Complete Router Ready - 107 stores loaded!');
+</script>
+```
+
+</body>
+</html>
