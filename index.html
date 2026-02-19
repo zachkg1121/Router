@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Truck Router - CORRECTED</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, sans-serif;
+            background: #1a1a1a;
+            color: #fff;
+            overflow: hidden;
+            height: 100vh;
+        }
+        #mapCanvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+        .panel {
+            position: absolute;
+            background: rgba(10, 10, 10, 0.95);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 12px;
+            padding: 15px;
+            z-index: 1000;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+            transition: all 0.3s;
+        }
+        .top-panel {
+            top: 20px;
+            left: 20px;
+            width: 280px;
+        }
+        .top-panel.collapsed {
+            width: 50px;
+            height: 50px;
+            padding: 0;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+        }
+        .panel-content {
+            display: block;
+        }
+        .top-panel.collapsed .panel-content {
+            display: none;
+        }
+        h1 {
+            font-size: 18px;
+            margin-bottom: 12px;
+            color: #ff6b35;
+        }
+        label {
+            display: block;
+            color: #f7b801;
+            font-size: 11px;
+            margin: 8px 0 4px 0;
+            font-weight: 600;
+        }
+        input {
+            width: 100%;
+            padding: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 6px;
+            color: #fff;
+            font-size: 14px;
+        }
+        button {
+            width: 100%;
+            padding: 10px;
+            background: #ff6b35;
+            border: none;
+            border-radius: 8px;
+            color: #fff;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        button:hover { background: #ff8c42; }
+        button.secondary {
+            background: rgba(255,255,255,0.1);
+            margin-top: 5px;
+        }
+        .directions {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid rgba(255,255,255,0.2);
+            max-height: 40vh;
+            overflow-y: auto;
+        }
+        .direction-item {
+            padding: 6px 0;
+            padding-left: 16px;
+            position: relative;
+            font-size: 12px;
+            line-height: 1.4;
+            color: rgba(255,255,255,0.85);
+        }
+        .direction-item:before {
+            content: "•";
+            position: absolute;
+            left: 0;
+            color: #ff6b35;
+            font-weight: bold;
+        }
+        .stat {
+            display: flex;
+            justify-content: space-between;
+            margin: 6px 0;
+            font-size: 12px;
+        }
+        .stat-value {
+            color: #f7b801;
+            font-weight: 600;
+        }
+        .loading {
+            text-align: center;
+            color: #f7b801;
+            padding: 10px;
+            font-size: 12px;
+        }
+        .directions::-webkit-scrollbar {
+            width: 4px;
+        }
+        .directions::-webkit-scrollbar-thumb {
+            background: rgba(255,255,255,0.3);
+            border-radius: 2px;
+        }
+        .toggle-icon {
+            display: none;
+        }
+        .collapsed .toggle-icon {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="mapCanvas"></canvas>
+
+```
+<div class="panel top-panel" id="panel">
+    <div class="toggle-icon" onclick="togglePanel()">☰</div>
+    <div class="panel-content">
+        <h1>🚛 Truck Router <span style="float:right;cursor:pointer;font-size:16px;" onclick="togglePanel()">✕</span></h1>
+        <label>FROM STORE</label>
+        <input type="text" id="fromStore" placeholder="Store # (e.g., 01)">
+        <label>TO STORE</label>
+        <input type="text" id="toStore" placeholder="Store # (e.g., 40)">
+        <button onclick="calculateRoute()">Get Directions</button>
+        <button class="secondary" onclick="clearRoute()">Clear</button>
+        
+        <div id="directions"></div>
+    </div>
+</div>
+
+<script>
+    const canvas = document.getElementById('mapCanvas');
+    const ctx = canvas.getContext('2d');
+    
+    const WH = {lat: 42.7942, lng: -74.0626, name: 'Warehouse'};
+    
+    // CORRECTED COORDINATES FROM GOOGLE MAPS
+    const stores = {
+        '01': {name: 'EASTERN PARKWAY', addr: '1640 Eastern Parkway, Schenectady, NY', lat: 42.8069222, lng: -73.9144807},
+        '03': {name: 'BRUNSWICK', addr: '716 Hoosick Rd, Troy, NY', lat: 42.7431231, lng: -73.6455360},
+        '23': {name: 'MADISON AVENUE', addr: '1060 Madison Avenue, Albany, NY', lat: 42.6646785, lng: -73.7902894},
+        '36': {name: 'COHOES', addr: '240 Congress Street, Cohoes, NY', lat: 42.7655000, lng: -73.7003889},
+        '38': {name: 'GLENVILLE', addr: '290 Saratoga Rd, Scotia, NY', lat: 42.8733056, lng: -73.9300556},
+        '39': {name: 'WILTON', addr: '3049 NY-50, Saratoga Springs, NY', lat: 43.1026944, lng: -73.7437500},
+        '40': {name: 'GLEN STREET', addr: '677 Upper Glen Street, Queensbury, NY', lat: 43.3263489, lng: -73.6656529},
+        '44': {name: 'NORTH UTICA', addr: '50 Auert Ave, Utica, NY', lat: 43.1152500, lng: -75.2093333},
+        '45': {name: 'DELAWARE', addr: '40 Delaware Ave, Albany, NY', lat: 42.6506389, lng: -73.7683056},
+        '111': {name: 'EAST GREENBUSH', addr: '501 Columbia Turnpike, Rensselaer, NY', lat: 42.6057718, lng: -73.7170648},
+        '138': {name: 'NEW LOUDON', addr: '873 New Loudon Road, Latham, NY', lat: 42.7542194, lng: -73.7579906},
+        '158': {name: 'SARATOGA', addr: '115 Ballston Ave, Saratoga Springs, NY', lat: 43.0732427, lng: -73.7921710}
+    };
+
+    let zoom = 9;
+    let centerLat = 42.8;
+    let centerLng = -73.8;
+    let currentRoute = null;
+    let mapTiles = {};
+
+    function togglePanel() {
+        document.getElementById('panel').classList.toggle('collapsed');
+        setTimeout(draw, 300);
+    }
+
+    function resizeCanvas() {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+        draw();
+    }
+
+    function latLngToXY(lat, lng) {
+        const scale = Math.pow(2, zoom) * 256 / (2 * Math.PI);
+        const x = (lng - centerLng) * scale * Math.cos(centerLat * Math.PI / 180) + canvas.width / 2;
+        const y = (centerLat - lat) * scale + canvas.height / 2;
+        return {x, y};
+    }
+
+    async function loadMapTile(x, y, z) {
+        const key = `${z}/${x}/${y}`;
+        if (mapTiles[key]) return mapTiles[key];
+        
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.src = `https://tile.openstreetmap.org/${z}/${x}/${y}.png`;
+        
+        return new Promise((resolve) => {
+            img.onload = () => {
+                mapTiles[key] = img;
+                resolve(img);
+            };
+            img.onerror = () => resolve(null);
+        });
+    }
+
+    async function draw() {
+        ctx.fillStyle = '#e5e3df';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        
+        const z = Math.floor(zoom);
+        const tilesNeeded = 3;
+        const centerTileX = Math.floor((centerLng + 180) / 360 * Math.pow(2, z));
+        const centerTileY = Math.floor((1 - Math.log(Math.tan(centerLat * Math.PI / 180) + 1 / Math.cos(centerLat * Math.PI / 180)) / Math.PI) / 2 * Math.pow(2, z));
+        
+        for (let tx = centerTileX - tilesNeeded; tx <= centerTileX + tilesNeeded; tx++) {
+            for (let ty = centerTileY - tilesNeeded; ty <= centerTileY + tilesNeeded; ty++) {
+                const tile = await loadMapTile(tx, ty, z);
+                if (tile) {
+                    const tileLat = Math.atan(Math.sinh(Math.PI * (1 - 2 * ty / Math.pow(2, z)))) * 180 / Math.PI;
+                    const tileLng = tx / Math.pow(2, z) * 360 - 180;
+                    const pos = latLngToXY(tileLat, tileLng);
+                    ctx.drawImage(tile, pos.x, pos.y, 256, 256);
+                }
+            }
+        }
+        
+        if (currentRoute && currentRoute.path) {
+            ctx.strokeStyle = '#ff6b35';
+            ctx.lineWidth = 6;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            ctx.shadowColor = 'rgba(0,0,0,0.3)';
+            ctx.shadowBlur = 4;
+            ctx.beginPath();
+            currentRoute.path.forEach((point, i) => {
+                const pos = latLngToXY(point[0], point[1]);
+                if (i === 0) ctx.moveTo(pos.x, pos.y);
+                else ctx.lineTo(pos.x, pos.y);
+            });
+            ctx.stroke();
+            ctx.shadowBlur = 0;
+        }
+        
+        const whPos = latLngToXY(WH.lat, WH.lng);
+        ctx.fillStyle = '#3498db';
+        ctx.beginPath();
+        ctx.arc(whPos.x, whPos.y, 14, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = '#fff';
+        ctx.lineWidth = 3;
+        ctx.stroke();
+        ctx.fillStyle = '#fff';
+        ctx.font = 'bold 11px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('WH', whPos.x, whPos.y + 4);
+        
+        Object.keys(stores).forEach(code => {
+            const store = stores[code];
+            const pos = latLngToXY(store.lat, store.lng);
+            
+            ctx.fillStyle = '#ff6b35';
+            ctx.beginPath();
+            ctx.arc(pos.x, pos.y, 10, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = '#fff';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            
+            ctx.fillStyle = '#000';
+            ctx.font = 'bold 10px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText(code, pos.x, pos.y + 3);
+        });
+    }
+
+    async function calculateRoute() {
+        const fromCode = document.getElementById('fromStore').value.trim().padStart(2, '0');
+        const toCode = document.getElementById('toStore').value.trim().padStart(2, '0');
+        
+        if (!stores[fromCode] || !stores[toCode]) {
+            alert('Invalid store codes. Available: 01, 03, 23, 36, 38, 39, 40, 44, 45, 111, 138, 158');
+            return;
+        }
+        
+        const from = stores[fromCode];
+        const to = stores[toCode];
+        
+        document.getElementById('directions').innerHTML = '<div class="loading">🚛 Calculating truck route...</div>';
+        
+        try {
+            const url = `https://valhalla1.openstreetmap.de/route?json={"locations":[{"lat":${from.lat},"lon":${from.lng}},{"lat":${to.lat},"lon":${to.lng}}],"costing":"truck","costing_options":{"truck":{"height":4.0,"width":2.6,"weight":26.0}}}`;
+            
+            const response = await fetch(url);
+            const data = await response.json();
+            
+            if (data.trip && data.trip.legs && data.trip.legs[0]) {
+                const leg = data.trip.legs[0];
+                const miles = (leg.summary.length * 0.621371).toFixed(1);
+                const mins = Math.round(leg.summary.time / 60);
+                
+                const path = decodePolyline(leg.shape);
+                currentRoute = {from, to, path};
+                
+                let html = `
+                    <div style="font-weight:600;margin-bottom:8px;color:#2ecc71;">✅ Truck Route Found</div>
+                    <div class="stat">
+                        <span>From:</span>
+                        <span class="stat-value">Store #${fromCode}</span>
+                    </div>
+                    <div class="stat">
+                        <span>To:</span>
+                        <span class="stat-value">Store #${toCode}</span>
+                    </div>
+                    <div class="stat">
+                        <span>Distance:</span>
+                        <span class="stat-value">${miles} miles</span>
+                    </div>
+                    <div class="stat">
+                        <span>Time:</span>
+                        <span class="stat-value">~${mins} min</span>
+                    </div>
+                    <div style="margin-top:12px;font-weight:600;color:#f7b801;font-size:11px;">Turn-by-Turn:</div>
+                `;
+                
+                leg.maneuvers.forEach(m => {
+                    html += `<div class="direction-item">${m.instruction}</div>`;
+                });
+                
+                document.getElementById('directions').innerHTML = html;
+                
+                const bounds = path.reduce((b, p) => ({
+                    minLat: Math.min(b.minLat, p[0]),
+                    maxLat: Math.max(b.maxLat, p[0]),
+                    minLng: Math.min(b.minLng, p[1]),
+                    maxLng: Math.max(b.maxLng, p[1])
+                }), {minLat: 90, maxLat: -90, minLng: 180, maxLng: -180});
+                
+                centerLat = (bounds.minLat + bounds.maxLat) / 2;
+                centerLng = (bounds.minLng + bounds.maxLng) / 2;
+                
+                draw();
+            } else {
+                throw new Error('No route found');
+            }
+        } catch (error) {
+            document.getElementById('directions').innerHTML = `
+                <div style="color:#e74c3c;font-size:12px;">⚠️ Truck routing unavailable</div>
+                <div style="margin-top:8px;font-size:11px;">Use Google Maps or OsmAnd</div>
+            `;
+        }
+    }
+
+    function clearRoute() {
+        currentRoute = null;
+        document.getElementById('fromStore').value = '';
+        document.getElementById('toStore').value = '';
+        document.getElementById('directions').innerHTML = '';
+        centerLat = 42.8;
+        centerLng = -73.8;
+        zoom = 9;
+        draw();
+    }
+
+    function decodePolyline(str) {
+        const coords = [];
+        let lat = 0, lng = 0, index = 0;
+        
+        while (index < str.length) {
+            let b, shift = 0, result = 0;
+            do {
+                b = str.charCodeAt(index++) - 63;
+                result |= (b & 0x1f) << shift;
+                shift += 5;
+            } while (b >= 0x20);
+            lat += (result & 1) ? ~(result >> 1) : (result >> 1);
+            
+            shift = 0; result = 0;
+            do {
+                b = str.charCodeAt(index++) - 63;
+                result |= (b & 0x1f) << shift;
+                shift += 5;
+            } while (b >= 0x20);
+            lng += (result & 1) ? ~(result >> 1) : (result >> 1);
+            
+            coords.push([lat / 1e6, lng / 1e6]);
+        }
+        
+        return coords;
+    }
+
+    let isDragging = false;
+    let lastX, lastY;
+
+    canvas.addEventListener('mousedown', (e) => {
+        isDragging = true;
+        lastX = e.clientX;
+        lastY = e.clientY;
+    });
+
+    canvas.addEventListener('mousemove', (e) => {
+        if (isDragging) {
+            const dx = e.clientX - lastX;
+            const dy = e.clientY - lastY;
+            const scale = Math.pow(2, zoom) * 256 / (2 * Math.PI);
+            centerLng -= dx / (scale * Math.cos(centerLat * Math.PI / 180));
+            centerLat += dy / scale;
+            lastX = e.clientX;
+            lastY = e.clientY;
+            draw();
+        }
+    });
+
+    canvas.addEventListener('mouseup', () => isDragging = false);
+    canvas.addEventListener('wheel', (e) => {
+        e.preventDefault();
+        zoom += e.deltaY < 0 ? 0.2 : -0.2;
+        zoom = Math.max(8, Math.min(15, zoom));
+        draw();
+    });
+
+    window.addEventListener('resize', resizeCanvas);
+    window.addEventListener('load', () => {
+        resizeCanvas();
+        console.log('✅ Truck Router loaded with CORRECTED coordinates!');
+        console.log('📍 12 stores available: 01, 03, 23, 36, 38, 39, 40, 44, 45, 111, 138, 158');
+    });
+</script>
+```
+
+</body>
+</html>
