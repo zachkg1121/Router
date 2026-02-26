@@ -1,0 +1,47 @@
+async function getRoute() {
+    const fromId = document.getElementById('fromStore').value.padStart(2, '0');
+    const toId = document.getElementById('toStore').value.padStart(2, '0');
+    const resultDiv = document.getElementById('result');
+
+    if (!stores[fromId] || !stores[toId]) {
+        resultDiv.innerHTML = '<div class="error">❌ Invalid store number(s)</div>';
+        return;
+    }
+
+    const start = stores[fromId];
+    const end = stores[toId];
+
+    resultDiv.innerHTML = '<div class="loading">🔄 Calculating truck route...</div>';
+
+    // THIS IS THE LINE YOU ARE CHANGING:
+    const url = `http://192.241.154.246`; 
+
+    const body = {
+        locations: [
+            { lat: start.lat, lon: start.lng, type: "break" },
+            { lat: end.lat, lon: end.lng, type: "break" }
+        ],
+        costing: "truck",
+        costing_options: {
+            truck: {
+                height: 4.11,
+                width: 2.6,
+                length: 21.0,
+                weight: 36.28,
+                axle_load: 9.07
+            }
+        },
+        units: "miles"
+    };
+
+    try {
+        const response = await fetch(url, {
+            method: 'POST',
+            body: JSON.stringify(body)
+        });
+        const data = await response.json();
+        displayRoute(data, start.name, end.name);
+    } catch (error) {
+        resultDiv.innerHTML = `<div class="error">❌ Server Error: ${error.message}<br>Make sure you allowed "Insecure Content" in your browser settings.</div>`;
+    }
+}
