@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Price Chopper Truck Router</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+            color: #fff;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container { max-width: 600px; margin: 0 auto; }
+        h1 { color: #ff6b35; font-size: 28px; margin-bottom: 10px; }
+        .subtitle { color: #f7b801; font-size: 14px; margin-bottom: 30px; }
+        .input-group { background: rgba(255,255,255,0.05); padding: 20px; border-radius: 12px; margin-bottom: 20px; }
+        label { display: block; color: #f7b801; font-size: 13px; margin-bottom: 8px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+        input { width: 100%; padding: 15px; background: rgba(0,0,0,0.3); border: 2px solid rgba(255,255,255,0.1); border-radius: 8px; color: #fff; font-size: 18px; margin-bottom: 15px; }
+        input:focus { outline: none; border-color: #ff6b35; }
+        button { width: 100%; padding: 18px; background: #ff6b35; border: none; border-radius: 8px; color: #fff; font-size: 18px; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+        button:active { transform: scale(0.98); background: #ff8c42; }
+        .result { background: rgba(255,255,255,0.05); padding: 20px; border-radius: 12px; margin-top: 20px; }
+        .success { color: #2ecc71; font-size: 18px; font-weight: 600; margin-bottom: 20px; }
+        .error { color: #e74c3c; font-size: 16px; margin-bottom: 15px; }
+        .loading { color: #f7b801; font-size: 16px; text-align: center; padding: 20px; }
+        .stat { display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid rgba(255,255,255,0.1); font-size: 15px; }
+        .stat:last-child { border-bottom: none; }
+        .stat-value { color: #f7b801; font-weight: 600; }
+        .directions { margin-top: 25px; }
+        .directions-title { color: #ff6b35; font-size: 16px; font-weight: 600; margin-bottom: 15px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .direction-item { padding: 12px 0 12px 25px; position: relative; line-height: 1.6; font-size: 14px; color: rgba(255,255,255,0.9); border-bottom: 1px solid rgba(255,255,255,0.05); }
+        .direction-item:before { content: "→"; position: absolute; left: 0; color: #ff6b35; font-weight: bold; font-size: 18px; }
+        .server-status { background: rgba(46, 204, 113, 0.1); border: 1px solid #2ecc71; padding: 10px 15px; border-radius: 6px; margin-bottom: 20px; font-size: 13px; color: #2ecc71; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚛 Truck Router</h1>
+        <div class="subtitle">Price Chopper Stores • Private Routing 🔒</div>
+        
+        <div class="server-status">✅ Server: 192.241.154.246</div>
+        
+        <div class="input-group">
+            <label>From Store Number</label>
+            <input type="number" id="fromStore" placeholder="Enter store # (e.g., 12)" inputmode="numeric">
+            
+            <label>To Store Number</label>
+            <input type="number" id="toStore" placeholder="Enter store # (e.g., 40)" inputmode="numeric">
+            
+            <button id="routeBtn" onclick="getRoute()">🚛 Get Truck Route</button>
+        </div>
+        
+        <div id="result"></div>
+    </div>
+
+    <script>
+        const stores = {12:{name:"JOHNSTOWN",lat:43.0157778,lng:-74.3608333},23:{name:"MADISON AVENUE",lat:42.6646785,lng:-73.7902894},24:{name:"WEST CARTHAGE",lat:43.9692772,lng:-75.624279},26:{name:"GENESEE ST",lat:43.0870364,lng:-75.2579385},28:{name:"GUILDERLAND",lat:42.6988056,lng:-73.8944722},29:{name:"POTSDAM",lat:44.6876835,lng:-74.987083},30:{name:"OGDENSBURG",lat:44.705478,lng:-75.4571197},32:{name:"MASSENA",lat:44.9189076,lng:-74.8850837},36:{name:"COHOES",lat:42.7655,lng:-73.7003889},37:{name:"GOUVERNEUR",lat:44.3401079,lng:-75.4547537},38:{name:"GLENVILLE",lat:42.8733056,lng:-73.9300556},39:{name:"WILTON",lat:43.1026944,lng:-73.74375},40:{name:"GLEN STREET",lat:43.3263489,lng:-73.6656529},42:{name:"CATSKILL",lat:42.2143619,lng:-73.8859762},43:{name:"CENTRAL AVE",lat:42.6770525,lng:-73.786411},44:{name:"NORTH UTICA",lat:43.11525,lng:-75.2093333},45:{name:"DELAWARE",lat:42.6506389,lng:-73.7683056},46:{name:"NORWOOD",lat:44.5971073,lng:-75.1493299},47:{name:"ROTTERDAM",lat:42.8167222,lng:-73.89225},52:{name:"COLONIE",lat:42.7257222,lng:-73.8424722},54:{name:"NORTH GREENBUSH",lat:42.6536944,lng:-73.69075},94:{name:"MECHANICVILLE",lat:42.9097778,lng:-73.6841111},102:{name:"WATERTOWN",lat:43.9758611,lng:-75.9456389},111:{name:"EAST GREENBUSH",lat:42.6057718,lng:-73.7170648},112:{name:"CLIFTON SHOPPERS WORLD",lat:42.8647778,lng:-73.784},114:{name:"MIDDLETOWN",lat:41.4491667,lng:-74.3828333},116:{name:"COBLESKILL",lat:42.6810278,lng:-74.4700556},122:{name:"WEST RUTLAND",lat:43.5932578,lng:-73.0434122},123:{name:"BARRE",lat:44.2215261,lng:-72.5465072},125:{name:"MANCHESTER",lat:43.1746521,lng:-73.0521324},127:{name:"PLATTSBURGH",lat:44.8364385,lng:-73.0806363},129:{name:"POUGHKEEPSIE",lat:41.6669167,lng:-73.93},130:{name:"ENDICOTT",lat:42.104,lng:-76.0526111},131:{name:"RUTLAND",lat:43.6047149,lng:-72.9779522},134:{name:"ONEONTA",lat:42.4627778,lng:-75.0138056},135:{name:"DUNMORE",lat:41.4357084,lng:-75.6163685},136:{name:"BRATTLEBORO",lat:42.8385956,lng:-72.5654862},137:{name:"MORRISVILLE",lat:44.5737787,lng:-72.590483},138:{name:"NEW LOUDON",lat:42.7542194,lng:-73.7579906},139:{name:"NEW AMSTERDAM",lat:42.9635556,lng:-74.1824444},140:{name:"PITTSFIELD",lat:42.4674717,lng:-73.1948474},141:{name:"ST JOHNSBURY",lat:44.4449873,lng:-72.0155716},142:{name:"ST J",lat:41.4558611,lng:-74.0588889},148:{name:"PARK AVENUE",lat:42.2705026,lng:-71.8152576},150:{name:"SPENCER",lat:42.2447638,lng:-71.9948465},151:{name:"SUNDERLAND ROAD",lat:42.246833,lng:-71.771616},155:{name:"GREAT BARRINGTON",lat:42.210638,lng:-73.3453217},156:{name:"TORRINGTON",lat:41.8195631,lng:-73.0810342},157:{name:"GRANVILLE",lat:43.3966111,lng:-73.2616111},158:{name:"SARATOGA",lat:43.0732427,lng:-73.792171},159:{name:"SLINGERLANDS",lat:42.6388611,lng:-73.8550278},160:{name:"WORCESTER FAIR",lat:42.2148756,lng:-71.7960476},161:{name:"HOOSICK FALLS",lat:42.8755,lng:-73.3480278},162:{name:"MARLBORO",lat:42.3513273,lng:-71.5352222},164:{name:"PALATINE BRIDGE",lat:42.9152778,lng:-74.5895833},165:{name:"PLATTSBURGH",lat:44.4497378,lng:-73.2094125},166:{name:"MALONE",lat:44.8457524,lng:-74.3007413},167:{name:"WEST LEBANON",lat:43.6249519,lng:-72.3246342},168:{name:"BURLINGTON",lat:44.6961111,lng:-73.4947222},170:{name:"RUTLAND PLAZA",lat:43.4250556,lng:-73.7146389},171:{name:"BENNINGTON",lat:42.90231,lng:-73.2148832}};
+
+        async function getRoute() {
+            const from = document.getElementById('fromStore').value;
+            const to = document.getElementById('toStore').value;
+            const resultDiv = document.getElementById('result');
+            
+            if (!stores[from] || !stores[to]) {
+                resultDiv.innerHTML = '<div class="error">❌ Store number not found.</div>';
+                return;
+            }
+
+            resultDiv.innerHTML = '<div class="loading">🚚 Calculating truck route...</div>';
+
+            const serverUrl = 'http://192.241.154.246';
+
+            const requestBody = {
+                locations: [
+                    { lat: stores[from].lat, lon: stores[from].lng },
+                    { lat: stores[to].lat, lon: stores[to].lng }
+                ],
+                costing: "truck",
+                units: "miles"
+            };
+
+            try {
+                const response = await fetch(serverUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(requestBody)
+                });
+
+                if (!response.ok) throw new Error('Server returned ' + response.status);
+
+                const data = await response.json();
+                const trip = data.trip;
+                const summary = trip.summary;
+                const legs = trip.legs[0].maneuvers;
+
+                let html = `
+                    <div class="result">
+                        <div class="success">Route Found!</div>
+                        <div class="stat"><span>Origin:</span> <span class="stat-value">${stores[from].name} (#${from})</span></div>
+                        <div class="stat"><span>Destination:</span> <span class="stat-value">${stores[to].name} (#${to})</span></div>
+                        <div class="stat"><span>Distance:</span> <span class="stat-value">${summary.length.toFixed(1)} miles</span></div>
+                        <div class="stat"><span>Est. Time:</span> <span class="stat-value">${Math.round(summary.time / 60)} mins</span></div>
+                        
+                        <div class="directions">
+                            <div class="directions-title">Turn-by-Turn Directions</div>
+                            ${legs.map(step => `<div class="direction-item">${step.instruction} (${step.length.toFixed(1)} mi)</div>`).join('')}
+                        </div>
+                    </div>
+                `;
+                resultDiv.innerHTML = html;
+
+            } catch (err) {
+                console.error(err);
+                resultDiv.innerHTML = `<div class="error">❌ Router Error: ${err.message}</div>`;
+            }
+        }
+    </script>
+</body>
+</html>
