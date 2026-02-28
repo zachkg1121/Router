@@ -1,0 +1,727 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Price Chopper Truck Router</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+            color: #fff;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        h1 { 
+            color: #ff6b35;
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+        .subtitle {
+            color: #f7b801;
+            font-size: 14px;
+            margin-bottom: 30px;
+        }
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 2fr;
+            gap: 20px;
+        }
+        @media (max-width: 768px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+        }
+        .input-section {
+            background: rgba(255,255,255,0.05);
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 15px;
+        }
+        .dc-button {
+            width: 100%;
+            padding: 12px;
+            background: #2ecc71;
+            border: none;
+            border-radius: 8px;
+            color: #fff;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-bottom: 15px;
+            transition: all 0.2s;
+        }
+        .dc-button:active {
+            transform: scale(0.98);
+            background: #27ae60;
+        }
+        .tracking-section {
+            background: rgba(255,255,255,0.05);
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 15px;
+        }
+        .tracking-button {
+            width: 100%;
+            padding: 15px;
+            border: none;
+            border-radius: 8px;
+            color: #fff;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-bottom: 10px;
+            transition: all 0.2s;
+        }
+        .start-tracking {
+            background: #3498db;
+        }
+        .start-tracking:active {
+            background: #2980b9;
+        }
+        .stop-tracking {
+            background: #e74c3c;
+        }
+        .stop-tracking:active {
+            background: #c0392b;
+        }
+        .tracking-info {
+            background: rgba(52, 152, 219, 0.1);
+            border: 1px solid #3498db;
+            padding: 10px 15px;
+            border-radius: 6px;
+            font-size: 13px;
+            color: #3498db;
+            margin-top: 10px;
+        }
+        label { 
+            display: block;
+            color: #f7b801;
+            font-size: 13px;
+            margin-bottom: 8px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        input { 
+            width: 100%;
+            padding: 15px;
+            background: rgba(0,0,0,0.3);
+            border: 2px solid rgba(255,255,255,0.1);
+            border-radius: 8px;
+            color: #fff;
+            font-size: 18px;
+            margin-bottom: 15px;
+        }
+        input:focus {
+            outline: none;
+            border-color: #ff6b35;
+        }
+        button { 
+            width: 100%;
+            padding: 18px;
+            background: #ff6b35;
+            border: none;
+            border-radius: 8px;
+            color: #fff;
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        button:active { 
+            transform: scale(0.98);
+            background: #ff8c42;
+        }
+        #map {
+            width: 100%;
+            height: 700px;
+            border-radius: 12px;
+            background: rgba(255,255,255,0.05);
+        }
+        .result {
+            background: rgba(255,255,255,0.05);
+            padding: 20px;
+            border-radius: 12px;
+            margin-top: 20px;
+        }
+        .success {
+            color: #2ecc71;
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 20px;
+        }
+        .error {
+            color: #e74c3c;
+            font-size: 16px;
+            margin-bottom: 15px;
+        }
+        .loading {
+            color: #f7b801;
+            font-size: 16px;
+            text-align: center;
+            padding: 20px;
+        }
+        .stat {
+            display: flex;
+            justify-content: space-between;
+            padding: 12px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            font-size: 15px;
+        }
+        .stat:last-child {
+            border-bottom: none;
+        }
+        .stat-value {
+            color: #f7b801;
+            font-weight: 600;
+        }
+        .directions {
+            margin-top: 25px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .directions-title {
+            color: #ff6b35;
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 15px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .direction-item {
+            padding: 12px 0 12px 25px;
+            position: relative;
+            line-height: 1.6;
+            font-size: 14px;
+            color: rgba(255,255,255,0.9);
+        }
+        .direction-item:before {
+            content: "→";
+            position: absolute;
+            left: 0;
+            color: #ff6b35;
+            font-weight: bold;
+            font-size: 18px;
+        }
+        .server-status {
+            background: rgba(46, 204, 113, 0.1);
+            border: 1px solid #2ecc71;
+            padding: 10px 15px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            font-size: 13px;
+            color: #2ecc71;
+        }
+        .leaflet-popup-content-wrapper {
+            background: #2d2d2d;
+            color: #fff;
+        }
+        .leaflet-popup-tip {
+            background: #2d2d2d;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚛 Truck Router + GPS Tracking</h1>
+        <div class="subtitle">131 Price Chopper Stores + DC1 • GPS Trip Recording 📍</div>
+        
+        <div class="server-status">
+            ✅ Running on your own Valhalla server with SSL encryption
+        </div>
+        
+        <div class="main-content">
+            <div>
+                <div class="tracking-section">
+                    <h3 style="color: #3498db; margin-bottom: 15px;">📍 GPS Trip Tracking</h3>
+                    <button id="startTracking" class="tracking-button start-tracking" onclick="startTracking()">▶️ Start Trip</button>
+                    <button id="stopTracking" class="tracking-button stop-tracking" onclick="stopTracking()" style="display:none;">⏹️ End Trip & Save</button>
+                    <div id="trackingInfo"></div>
+                </div>
+                
+                <div class="input-section">
+                    <button class="dc-button" onclick="setFromDC1()">📦 Route from DC1</button>
+                    
+                    <label>From Store Number (or type "DC1")</label>
+                    <input type="text" id="fromStore" placeholder='Enter store # or "DC1"'>
+                    
+                    <label>To Store Number</label>
+                    <input type="number" id="toStore" placeholder="Enter store #" inputmode="numeric">
+                    
+                    <button onclick="getRoute()">🚛 Get Truck Route</button>
+                </div>
+                
+                <div id="result"></div>
+            </div>
+            
+            <div id="map"></div>
+        </div>
+    </div>
+
+    <script>
+        const DC1 = {name:"DC1 (Distribution Center)",lat:42.783394,lng:-73.997738};
+        
+        const stores = {
+            "DC1":{name:"DC1 (Distribution Center)",lat:42.783394,lng:-73.997738},
+            1:{name:"EASTERN PARKWAY",lat:42.8069222,lng:-73.9144807},
+            3:{name:"BRUNSWICK",lat:42.743397,lng:-73.645708},
+            4:{name:"LINCOLN",lat:44.041337,lng:-71.671618},
+            12:{name:"JOHNSTOWN",lat:43.0157778,lng:-74.3608333},
+            23:{name:"MADISON AVENUE",lat:42.6646785,lng:-73.7902894},
+            24:{name:"WEST CARTHAGE",lat:43.9692772,lng:-75.624279},
+            26:{name:"GENESEE ST",lat:43.0870364,lng:-75.2579385},
+            28:{name:"GUILDERLAND",lat:42.6988056,lng:-73.8944722},
+            29:{name:"POTSDAM",lat:44.6876835,lng:-74.987083},
+            30:{name:"OGDENSBURG",lat:44.705478,lng:-75.4571197},
+            32:{name:"MASSENA",lat:44.9189076,lng:-74.8850837},
+            36:{name:"COHOES",lat:42.7655,lng:-73.7003889},
+            37:{name:"GOUVERNEUR",lat:44.3401079,lng:-75.4547537},
+            38:{name:"GLENVILLE",lat:42.8733056,lng:-73.9300556},
+            39:{name:"WILTON",lat:43.1026944,lng:-73.74375},
+            40:{name:"GLEN STREET",lat:43.3263489,lng:-73.6656529},
+            42:{name:"CATSKILL",lat:42.2143619,lng:-73.8859762},
+            43:{name:"CENTRAL AVE",lat:42.6770525,lng:-73.786411},
+            44:{name:"NORTH UTICA",lat:43.11525,lng:-75.2093333},
+            45:{name:"DELAWARE",lat:42.6506389,lng:-73.7683056},
+            46:{name:"CANTON",lat:44.5971073,lng:-75.1493299},
+            47:{name:"NOTT ST",lat:42.8167222,lng:-73.89225},
+            52:{name:"COLONIE",lat:42.7257222,lng:-73.8424722},
+            54:{name:"NORTH GREENBUSH",lat:42.6536944,lng:-73.69075},
+            94:{name:"MECHANICVILLE",lat:42.9097778,lng:-73.6841111},
+            102:{name:"WATERTOWN",lat:43.9758611,lng:-75.9456389},
+            111:{name:"EAST GREENBUSH",lat:42.6057718,lng:-73.7170648},
+            112:{name:"CLIFTON SHOPPERS WORLD",lat:42.8647778,lng:-73.784},
+            114:{name:"MIDDLETOWN",lat:41.4491667,lng:-74.3828333},
+            116:{name:"COBLESKILL",lat:42.6810278,lng:-74.4700556},
+            122:{name:"WEST RUTLAND",lat:43.5932578,lng:-73.0434122},
+            123:{name:"BARRE",lat:44.2215261,lng:-72.5465072},
+            125:{name:"MANCHESTER",lat:43.1746521,lng:-73.0521324},
+            127:{name:"ST. ALBANS",lat:44.8364385,lng:-73.0806363},
+            129:{name:"POUGHKEEPSIE",lat:41.6669167,lng:-73.93},
+            130:{name:"ENDICOTT",lat:42.104,lng:-76.0526111},
+            131:{name:"RUTLAND",lat:43.6047149,lng:-72.9779522},
+            134:{name:"ONEONTA",lat:42.4627778,lng:-75.0138056},
+            135:{name:"O'NEILL HIGHWAY",lat:41.4357084,lng:-75.6163685},
+            136:{name:"BRATTLEBORO",lat:42.8385956,lng:-72.5654862},
+            137:{name:"MORRISVILLE",lat:44.5737787,lng:-72.590483},
+            138:{name:"LATHAM",lat:42.7542194,lng:-73.7579906},
+            139:{name:"NEW AMSTERDAM",lat:42.9635556,lng:-74.1824444},
+            140:{name:"PITTSFIELD",lat:42.4674717,lng:-73.1948474},
+            141:{name:"ST JOHNSBURY",lat:44.4449873,lng:-72.0155716},
+            142:{name:"VAILS GATE",lat:41.4558611,lng:-74.0588889},
+            148:{name:"PARK AVENUE",lat:42.2705026,lng:-71.8152576},
+            150:{name:"SPENCER",lat:42.2447638,lng:-71.9948465},
+            151:{name:"SUNDERLAND ROAD",lat:42.246833,lng:-71.771616},
+            155:{name:"GREAT BARRINGTON",lat:42.210638,lng:-73.3453217},
+            156:{name:"TORRINGTON",lat:41.8195631,lng:-73.0810342},
+            157:{name:"GRANVILLE",lat:43.3966111,lng:-73.2616111},
+            158:{name:"SARATOGA",lat:43.0732427,lng:-73.792171},
+            159:{name:"SLINGERLANDS",lat:42.6388611,lng:-73.8550278},
+            160:{name:"WORCESTER FAIR",lat:42.2148756,lng:-71.7960476},
+            161:{name:"NORWICH",lat:42.514785,lng:-75.523132},
+            162:{name:"MARLBORO",lat:42.3513273,lng:-71.5352222},
+            164:{name:"PALATINE BRIDGE",lat:42.9152778,lng:-74.5895833},
+            165:{name:"BURLINGTON",lat:44.4497378,lng:-73.2094125},
+            166:{name:"MALONE",lat:44.8457524,lng:-74.3007413},
+            167:{name:"WEST LEBANON",lat:43.6249519,lng:-72.3246342},
+            168:{name:"PLATTSBURGH",lat:44.6961111,lng:-73.4947222},
+            170:{name:"LAKE GEORGE",lat:43.4250556,lng:-73.7146389},
+            171:{name:"BENNINGTON",lat:42.90231,lng:-73.2148832},
+            172:{name:"ERIE BLVD",lat:43.0545556,lng:-76.1036111},
+            173:{name:"WYOMING",lat:41.3008662,lng:-75.8534751},
+            174:{name:"WESTERN LIGHTS",lat:43.0357959,lng:-76.1939909},
+            175:{name:"ALTAMONT AVE",lat:42.7806389,lng:-73.9553056},
+            177:{name:"WINDSOR VT",lat:43.4855794,lng:-72.3852994},
+            178:{name:"CORTLAND",lat:42.5735803,lng:-76.2174324},
+            180:{name:"LAKE PLACID",lat:44.2954444,lng:-74.0105556},
+            181:{name:"HUDSON VALLEY PLAZA",lat:42.6965278,lng:-73.6884167},
+            183:{name:"JOHNSTON RD",lat:42.6875,lng:-73.8602778},
+            184:{name:"MALTA",lat:42.9734444,lng:-73.7921667},
+            185:{name:"MONTROSE",lat:41.8380671,lng:-75.8536914},
+            188:{name:"ALBANY SHAKER RD",lat:42.7072222,lng:-73.8166667},
+            189:{name:"PUTNAM",lat:41.9199915,lng:-71.9074981},
+            190:{name:"EDWARDSVILLE",lat:41.2581874,lng:-75.9019047},
+            191:{name:"NISKAYUNA",lat:42.776694,lng:-73.893313},
+            192:{name:"ESSEX JUNCTION",lat:44.511067,lng:-73.0655807},
+            193:{name:"SAUGERTIES",lat:42.0805556,lng:-73.9935},
+            194:{name:"MOUNTAIN STREET",lat:42.3244986,lng:-71.7976512},
+            196:{name:"GLENMONT",lat:42.6031111,lng:-73.7963889},
+            198:{name:"NEWBURGH",lat:41.5230833,lng:-74.0285556},
+            199:{name:"CICERO",lat:43.1505556,lng:-76.1190556},
+            202:{name:"WESTFALL",lat:41.3619171,lng:-74.7078637},
+            203:{name:"SOUTHINGTON",lat:41.6285096,lng:-72.8739452},
+            204:{name:"BRISTOL",lat:41.6848665,lng:-72.9391474},
+            206:{name:"ROME",lat:43.2297222,lng:-75.4382778},
+            207:{name:"COMMERCIAL DRIVE",lat:43.0852778,lng:-75.0052778},
+            208:{name:"KEENE",lat:42.9262394,lng:-72.305729},
+            209:{name:"NEWINGTON",lat:41.6699241,lng:-72.7220061},
+            210:{name:"RICHFIELD SPRINGS",lat:42.8562778,lng:-74.9972778},
+            213:{name:"ONEIDA",lat:43.0802778,lng:-75.6447222},
+            214:{name:"FULTON",lat:43.3240833,lng:-76.4252778},
+            215:{name:"SIDNEY",lat:42.29775,lng:-75.4123611},
+            216:{name:"OWEGO FAIR",lat:42.09925,lng:-76.2709444},
+            218:{name:"DELHI",lat:42.2665066,lng:-74.9237383},
+            219:{name:"DERBY",lat:44.9529631,lng:-72.1594819},
+            220:{name:"LAKE CHAMPLAIN",lat:44.9796528,lng:-73.4463889},
+            221:{name:"NEW WINDSOR",lat:41.8718869,lng:-72.6603733},
+            222:{name:"NEW WILKES BARRE",lat:41.2398425,lng:-75.8614852},
+            223:{name:"WARWICK",lat:41.55,lng:-74.1886111},
+            225:{name:"COLGATE",lat:42.8435,lng:-75.5522778},
+            226:{name:"OSWEGO",lat:43.4630278,lng:-76.4854444},
+            227:{name:"LEBANON",lat:43.6364629,lng:-72.2881816},
+            228:{name:"SOUTH BURLINGTON",lat:44.4672777,lng:-73.1736797},
+            229:{name:"SHREWSBURY",lat:42.278111,lng:-71.6979139},
+            230:{name:"COLCHESTER",lat:44.5380601,lng:-73.2469523},
+            231:{name:"HOPKINTON",lat:42.210264,lng:-71.5496599},
+            232:{name:"MIDDLETOWN CT",lat:41.5542297,lng:-72.6813737},
+            233:{name:"LENOX",lat:42.4048586,lng:-73.2652584},
+            234:{name:"CHENANGO",lat:42.1687222,lng:-75.8836389},
+            235:{name:"COOPERSTOWN",lat:42.6926111,lng:-74.9344444},
+            236:{name:"MARSHALLS CREEK",lat:41.0501373,lng:-75.1096576},
+            237:{name:"BINGHAMTON",lat:42.10675,lng:-75.9359167},
+            239:{name:"GARDNER",lat:42.5683695,lng:-71.9844949},
+            240:{name:"WEBSTER",lat:42.0606997,lng:-71.8618673},
+            241:{name:"ALEXANDRIA BAY",lat:44.2964167,lng:-74.9682778},
+            242:{name:"LITTLE FALLS",lat:43.0437778,lng:-74.8583611},
+            243:{name:"STORRS",lat:41.8017903,lng:-72.2404544},
+            244:{name:"SUTTON",lat:42.1626673,lng:-71.7354977},
+            245:{name:"WATERVLIET",lat:42.7321667,lng:-73.7043056},
+            246:{name:"CHATHAM",lat:42.3469722,lng:-73.6048611},
+            247:{name:"WARRENSBURG",lat:43.4881944,lng:-73.7594167},
+            248:{name:"OXFORD",lat:41.4211158,lng:-73.1072384},
+            249:{name:"FORT EDWARD",lat:43.2833889,lng:-73.5861389},
+            250:{name:"CLIFTON PARK",lat:42.8684167,lng:-73.8201389}
+        };
+
+        // Initialize map
+        const map = L.map('map').setView([43.0, -74.0], 7);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors'
+        }).addTo(map);
+
+        let routeLine = null;
+        let startMarker = null;
+        let endMarker = null;
+        
+        // GPS Tracking variables
+        let isTracking = false;
+        let trackingPoints = [];
+        let trackingPolyline = null;
+        let currentLocationMarker = null;
+        let watchId = null;
+        let tripStartTime = null;
+
+        function setFromDC1() {
+            document.getElementById('fromStore').value = 'DC1';
+        }
+
+        function startTracking() {
+            if (!navigator.geolocation) {
+                alert('GPS not supported on this device');
+                return;
+            }
+
+            isTracking = true;
+            trackingPoints = [];
+            tripStartTime = Date.now();
+            
+            document.getElementById('startTracking').style.display = 'none';
+            document.getElementById('stopTracking').style.display = 'block';
+            document.getElementById('trackingInfo').innerHTML = '<div class="tracking-info">📍 GPS Tracking Active...</div>';
+
+            // Start watching position
+            watchId = navigator.geolocation.watchPosition(
+                (position) => {
+                    const lat = position.coords.latitude;
+                    const lng = position.coords.longitude;
+                    const speed = position.coords.speed || 0; // m/s
+                    
+                    trackingPoints.push({
+                        lat: lat,
+                        lng: lng,
+                        timestamp: Date.now(),
+                        speed: speed * 2.237 // Convert to mph
+                    });
+
+                    // Update current location marker
+                    if (currentLocationMarker) {
+                        map.removeLayer(currentLocationMarker);
+                    }
+                    currentLocationMarker = L.circleMarker([lat, lng], {
+                        radius: 8,
+                        fillColor: "#3498db",
+                        color: "#fff",
+                        weight: 2,
+                        opacity: 1,
+                        fillOpacity: 0.8
+                    }).addTo(map).bindPopup("📍 Your Current Location");
+
+                    // Update tracking line
+                    if (trackingPolyline) {
+                        map.removeLayer(trackingPolyline);
+                    }
+                    if (trackingPoints.length > 1) {
+                        const coords = trackingPoints.map(p => [p.lat, p.lng]);
+                        trackingPolyline = L.polyline(coords, {
+                            color: '#e74c3c',
+                            weight: 4,
+                            opacity: 0.7
+                        }).addTo(map);
+                        map.fitBounds(trackingPolyline.getBounds(), {padding: [50, 50]});
+                    }
+
+                    // Update tracking info
+                    const duration = Math.round((Date.now() - tripStartTime) / 1000 / 60);
+                    const pointCount = trackingPoints.length;
+                    document.getElementById('trackingInfo').innerHTML = `
+                        <div class="tracking-info">
+                            📍 GPS Active | ${pointCount} points | ${duration} min
+                        </div>`;
+                },
+                (error) => {
+                    console.error('GPS Error:', error);
+                    document.getElementById('trackingInfo').innerHTML = `
+                        <div class="tracking-info" style="border-color:#e74c3c;color:#e74c3c;">
+                            ❌ GPS Error: ${error.message}
+                        </div>`;
+                },
+                {
+                    enableHighAccuracy: true,
+                    timeout: 5000,
+                    maximumAge: 0
+                }
+            );
+        }
+
+        function stopTracking() {
+            if (watchId) {
+                navigator.geolocation.clearWatch(watchId);
+            }
+            
+            isTracking = false;
+            document.getElementById('startTracking').style.display = 'block';
+            document.getElementById('stopTracking').style.display = 'none';
+
+            if (trackingPoints.length < 2) {
+                document.getElementById('trackingInfo').innerHTML = `
+                    <div class="tracking-info" style="border-color:#e74c3c;color:#e74c3c;">
+                        ❌ Not enough GPS data recorded
+                    </div>`;
+                return;
+            }
+
+            // Calculate trip statistics
+            const duration = (Date.now() - tripStartTime) / 1000 / 60; // minutes
+            let totalDistance = 0;
+            
+            for (let i = 1; i < trackingPoints.length; i++) {
+                const dist = calculateDistance(
+                    trackingPoints[i-1].lat,
+                    trackingPoints[i-1].lng,
+                    trackingPoints[i].lat,
+                    trackingPoints[i].lng
+                );
+                totalDistance += dist;
+            }
+            
+            const avgSpeed = trackingPoints.reduce((sum, p) => sum + p.speed, 0) / trackingPoints.length;
+
+            // Display trip summary
+            document.getElementById('trackingInfo').innerHTML = `
+                <div class="tracking-info" style="border-color:#2ecc71;color:#2ecc71;">
+                    ✅ Trip Saved!<br>
+                    📏 ${totalDistance.toFixed(1)} miles<br>
+                    ⏱️ ${duration.toFixed(1)} minutes<br>
+                    🚛 Avg ${avgSpeed.toFixed(1)} mph<br>
+                    📍 ${trackingPoints.length} GPS points
+                </div>`;
+
+            // Save trip data to server
+            saveTripData({
+                startTime: tripStartTime,
+                endTime: Date.now(),
+                duration: duration,
+                distance: totalDistance,
+                avgSpeed: avgSpeed,
+                points: trackingPoints
+            });
+        }
+
+        function calculateDistance(lat1, lon1, lat2, lon2) {
+            const R = 3959; // Earth radius in miles
+            const dLat = (lat2 - lat1) * Math.PI / 180;
+            const dLon = (lon2 - lon1) * Math.PI / 180;
+            const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                      Math.sin(dLon/2) * Math.sin(dLon/2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+            return R * c;
+        }
+
+        async function saveTripData(tripData) {
+            try {
+                // For now, save to localStorage
+                const trips = JSON.parse(localStorage.getItem('trips') || '[]');
+                trips.push(tripData);
+                localStorage.setItem('trips', JSON.stringify(trips));
+                
+                console.log('Trip saved to localStorage:', tripData);
+                // In Phase 2, we'll upload this to your server
+            } catch (error) {
+                console.error('Error saving trip:', error);
+            }
+        }
+
+        async function getRoute() {
+            let fromCode = document.getElementById('fromStore').value.toString().toUpperCase();
+            const toCode = Number(document.getElementById('toStore').value);
+            const resultDiv = document.getElementById('result');
+            
+            if (fromCode !== 'DC1') {
+                fromCode = Number(fromCode);
+            }
+            
+            if (!stores[fromCode] || !stores[toCode]) {
+                resultDiv.innerHTML = '<div class="result"><div class="error">❌ Invalid codes. Enter store # or "DC1"</div></div>';
+                return;
+            }
+            
+            const from = stores[fromCode];
+            const to = stores[toCode];
+            
+            resultDiv.innerHTML = '<div class="result"><div class="loading">🚛 Calculating truck route...</div></div>';
+            
+            try {
+                const params = {
+                    locations: [
+                        {lat: from.lat, lon: from.lng},
+                        {lat: to.lat, lon: to.lng}
+                    ],
+                    costing: 'truck',
+                    costing_options: {
+                        truck: {
+                            height: 4.0,
+                            width: 2.6,
+                            weight: 26.0
+                        }
+                    }
+                };
+                
+                const url = `https://zgraham.duckdns.org/route?json=${encodeURIComponent(JSON.stringify(params))}`;
+                
+                const response = await fetch(url);
+                const data = await response.json();
+                
+                if (data.trip && data.trip.legs && data.trip.legs[0]) {
+                    const leg = data.trip.legs[0];
+                    const miles = (leg.summary.length * 0.621371).toFixed(1);
+                    const mins = Math.round(leg.summary.time / 60);
+                    
+                    // Clear previous route
+                    if (routeLine) map.removeLayer(routeLine);
+                    if (startMarker) map.removeLayer(startMarker);
+                    if (endMarker) map.removeLayer(endMarker);
+                    
+                    // Decode the route shape
+                    const routeCoords = decodePolyline(leg.shape);
+                    
+                    // Draw route on map
+                    routeLine = L.polyline(routeCoords, {
+                        color: '#ff6b35',
+                        weight: 4,
+                        opacity: 0.8
+                    }).addTo(map);
+                    
+                    // Add start/end markers
+                    startMarker = L.marker([from.lat, from.lng])
+                        .bindPopup(`<b>START: ${from.name}</b><br>${fromCode === 'DC1' ? 'Distribution Center' : 'Store #' + fromCode}`)
+                        .addTo(map);
+                    
+                    endMarker = L.marker([to.lat, to.lng])
+                        .bindPopup(`<b>END: ${to.name}</b><br>Store #${toCode}`)
+                        .addTo(map);
+                    
+                    // Fit map to route
+                    map.fitBounds(routeLine.getBounds(), {padding: [50, 50]});
+                    
+                    let html = `<div class="result">
+                        <div class="success">✅ Truck Route Found</div>
+                        <div class="stat"><span>From:</span><span class="stat-value">${from.name} ${fromCode === 'DC1' ? '' : '(#' + fromCode + ')'}</span></div>
+                        <div class="stat"><span>To:</span><span class="stat-value">${to.name} (#${toCode})</span></div>
+                        <div class="stat"><span>Distance:</span><span class="stat-value">${miles} miles</span></div>
+                        <div class="stat"><span>Time:</span><span class="stat-value">~${mins} minutes</span></div>
+                        <div class="directions">
+                            <div class="directions-title">Turn-by-Turn Directions:</div>`;
+                    
+                    leg.maneuvers.forEach(m => {
+                        html += `<div class="direction-item">${m.instruction}</div>`;
+                    });
+                    
+                    html += '</div></div>';
+                    resultDiv.innerHTML = html;
+                } else {
+                    resultDiv.innerHTML = '<div class="result"><div class="error">❌ No route found</div></div>';
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="result">
+                    <div class="error">❌ Server Unavailable</div>
+                    <div style="color:rgba(255,255,255,0.7);font-size:14px;line-height:1.6;">
+                        Could not connect to your routing server. Error: ${error.message}
+                    </div>
+                </div>`;
+            }
+        }
+        
+        // Decode polyline (Valhalla uses precision 6)
+        function decodePolyline(str, precision = 6) {
+            let index = 0, lat = 0, lng = 0;
+            const coordinates = [];
+            let shift = 0, result = 0, byte = null, latitude_change, longitude_change;
+            const factor = Math.pow(10, precision);
+
+            while (index < str.length) {
+                byte = null;
+                shift = 0;
+                result = 0;
+
+                do {
+                    byte = str.charCodeAt(index++) - 63;
+                    result |= (byte & 0x1f) << shift;
+                    shift += 5;
+                } while (byte >= 0x20);
+
+                latitude_change = ((result & 1) ? ~(result >> 1) : (result >> 1));
+
+                shift = result = 0;
+
+                do {
+                    byte = str.charCodeAt(index++) - 63;
+                    result |= (byte & 0x1f) << shift;
+                    shift += 5;
+                } while (byte >= 0x20);
+
+                longitude_change = ((result & 1) ? ~(result >> 1) : (result >> 1));
+
+                lat += latitude_change;
+                lng += longitude_change;
+
+                coordinates.push([lat / factor, lng / factor]);
+            }
+
+            return coordinates;
+        }
+        
+        document.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') getRoute();
+        });
+    </script>
+</body>
+</html>
