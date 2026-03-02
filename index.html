@@ -1,0 +1,1176 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="theme-color" content="#1a73e8">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Truck Router">
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="icon-192.png">
+    <title>Truck Router Pro</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <style>
+        * { 
+            margin: 0; 
+            padding: 0; 
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            overflow: hidden;
+            position: fixed;
+            width: 100%;
+            height: 100%;
+            background: #f5f5f5;
+        }
+        
+        /* Splash Screen */
+        #splash {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+            transition: opacity 0.5s ease;
+        }
+        
+        #splash.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+        
+        .splash-logo {
+            width: 90%;
+            max-width: 450px;
+            height: auto;
+            margin-bottom: 30px;
+            border-radius: 20px;
+        }
+        
+        .splash-title {
+            font-size: 28px;
+            font-weight: 700;
+            color: white;
+            margin-bottom: 10px;
+        }
+        
+        .splash-subtitle {
+            font-size: 14px;
+            color: rgba(255,255,255,0.8);
+        }
+        
+        /* Full screen map */
+        #map {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+        }
+        
+        /* Floating search card */
+        .search-card {
+            position: absolute;
+            top: env(safe-area-inset-top, 15px);
+            left: 15px;
+            right: 15px;
+            background: #fff;
+            border-radius: 16px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+            padding: 16px;
+            z-index: 1000;
+            max-width: 400px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        .search-card.minimized {
+            transform: translateY(calc(-100% - env(safe-area-inset-top, 15px) - 15px));
+            pointer-events: none;
+        }
+        
+        .search-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 16px;
+            gap: 10px;
+        }
+        
+        .app-icon {
+            font-size: 28px;
+        }
+        
+        .app-title {
+            flex: 1;
+            font-size: 18px;
+            font-weight: 700;
+            color: #202124;
+        }
+        
+        .stop-container {
+            margin-bottom: 12px;
+        }
+        
+        .stop-row {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 8px;
+            align-items: center;
+        }
+        
+        .stop-label {
+            font-size: 12px;
+            font-weight: 600;
+            color: #5f6368;
+            min-width: 45px;
+        }
+        
+        .stop-row input {
+            flex: 1;
+            padding: 12px;
+            border: 2px solid #e8eaed;
+            border-radius: 10px;
+            font-size: 15px;
+            background: #f8f9fa;
+            transition: all 0.2s;
+        }
+        
+        .stop-row input:focus {
+            outline: none;
+            border-color: #1a73e8;
+            background: #fff;
+        }
+        
+        .remove-stop {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            border: none;
+            background: #fee;
+            color: #d93025;
+            font-size: 18px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .add-stop-btn {
+            width: 100%;
+            padding: 10px;
+            background: transparent;
+            border: 2px dashed #dadce0;
+            border-radius: 10px;
+            color: #1a73e8;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-bottom: 12px;
+        }
+        
+        .route-options {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+        
+        .route-option {
+            flex: 1;
+            padding: 10px;
+            background: #f1f3f4;
+            border: 2px solid transparent;
+            border-radius: 10px;
+            font-size: 13px;
+            font-weight: 600;
+            color: #5f6368;
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.2s;
+        }
+        
+        .route-option.active {
+            background: #e8f0fe;
+            border-color: #1a73e8;
+            color: #1a73e8;
+        }
+        
+        .route-btn {
+            width: 100%;
+            padding: 16px;
+            background: linear-gradient(135deg, #1a73e8 0%, #4285f4 100%);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(26,115,232,0.3);
+            transition: all 0.2s;
+        }
+        
+        .route-btn:active {
+            transform: scale(0.98);
+        }
+        
+        /* Floating action buttons */
+        .fab-container {
+            position: absolute;
+            bottom: calc(220px + env(safe-area-inset-bottom, 0px));
+            right: 16px;
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        
+        .fab {
+            width: 56px;
+            height: 56px;
+            background: white;
+            border-radius: 50%;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            border: none;
+            font-size: 24px;
+            transition: all 0.2s;
+        }
+        
+        .fab:active {
+            transform: scale(0.95);
+        }
+        
+        .fab.tracking {
+            background: #ea4335;
+            color: white;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { box-shadow: 0 4px 12px rgba(234,67,53,0.4); }
+            50% { box-shadow: 0 4px 24px rgba(234,67,53,0.6); }
+        }
+        
+        .search-toggle {
+            width: 48px;
+            height: 48px;
+        }
+        
+        @media (max-width: 768px) {
+            .search-toggle {
+                display: flex;
+            }
+        }
+        
+        /* Tracking info banner */
+        .tracking-banner {
+            position: absolute;
+            top: calc(env(safe-area-inset-top, 15px) + 15px);
+            left: 15px;
+            right: 15px;
+            max-width: 400px;
+            background: linear-gradient(135deg, #ea4335 0%, #f44336 100%);
+            color: white;
+            padding: 12px 16px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(234,67,53,0.3);
+            z-index: 999;
+            font-size: 13px;
+            font-weight: 600;
+            display: none;
+            animation: slideDown 0.3s ease;
+        }
+        
+        @keyframes slideDown {
+            from { transform: translateY(-20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        
+        .tracking-banner.active {
+            display: block;
+        }
+        
+        /* Directions drawer */
+        .drawer {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: white;
+            border-radius: 24px 24px 0 0;
+            box-shadow: 0 -4px 24px rgba(0,0,0,0.12);
+            z-index: 999;
+            transform: translateY(calc(100% - 70px));
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            padding-bottom: env(safe-area-inset-bottom, 0px);
+        }
+        
+        .drawer.expanded {
+            transform: translateY(0);
+        }
+        
+        .drawer-handle {
+            width: 100%;
+            padding: 16px;
+            text-align: center;
+            cursor: pointer;
+        }
+        
+        .drawer-bar {
+            width: 40px;
+            height: 4px;
+            background: #dadce0;
+            border-radius: 2px;
+            margin: 0 auto 12px;
+        }
+        
+        .drawer-summary {
+            font-size: 15px;
+            font-weight: 600;
+            color: #202124;
+        }
+        
+        .drawer-content {
+            max-height: 60vh;
+            overflow-y: auto;
+            padding: 0 16px 16px;
+        }
+        
+        .route-summary {
+            padding: 16px;
+            background: linear-gradient(135deg, #f8f9fa 0%, #e8eaed 100%);
+            border-radius: 12px;
+            margin-bottom: 16px;
+        }
+        
+        .summary-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            font-size: 14px;
+        }
+        
+        .summary-label {
+            color: #5f6368;
+            font-weight: 500;
+        }
+        
+        .summary-value {
+            font-weight: 600;
+            color: #202124;
+        }
+        
+        .return-btn {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #34a853 0%, #4caf50 100%);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-bottom: 16px;
+            box-shadow: 0 4px 12px rgba(52,168,83,0.3);
+        }
+        
+        .directions-list {
+            margin-top: 16px;
+        }
+        
+        .direction-header {
+            font-size: 13px;
+            font-weight: 600;
+            color: #5f6368;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 12px;
+        }
+        
+        .direction-step {
+            display: flex;
+            padding: 12px;
+            margin-bottom: 8px;
+            background: #f8f9fa;
+            border-radius: 10px;
+        }
+        
+        .direction-icon {
+            width: 28px;
+            margin-right: 12px;
+            color: #1a73e8;
+            font-size: 20px;
+        }
+        
+        .direction-text {
+            flex: 1;
+            font-size: 14px;
+            color: #202124;
+            line-height: 1.5;
+        }
+        
+        /* Install prompt */
+        .install-prompt {
+            position: fixed;
+            bottom: calc(env(safe-area-inset-bottom, 0px) + 20px);
+            left: 20px;
+            right: 20px;
+            background: white;
+            padding: 16px;
+            border-radius: 16px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+            display: none;
+            z-index: 10001;
+        }
+        
+        .install-prompt.show {
+            display: block;
+            animation: slideUp 0.3s ease;
+        }
+        
+        @keyframes slideUp {
+            from { transform: translateY(100%); }
+            to { transform: translateY(0); }
+        }
+        
+        .install-prompt-content {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+        
+        .install-icon {
+            font-size: 50px;
+        }
+        
+        .install-text h3 {
+            font-size: 16px;
+            color: #202124;
+            margin-bottom: 4px;
+        }
+        
+        .install-text p {
+            font-size: 13px;
+            color: #5f6368;
+        }
+        
+        .install-buttons {
+            display: flex;
+            gap: 8px;
+        }
+        
+        .install-buttons button {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 10px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        
+        .install-yes {
+            background: #1a73e8;
+            color: white;
+        }
+        
+        .install-no {
+            background: #f1f3f4;
+            color: #5f6368;
+        }
+    </style>
+</head>
+<body>
+    <!-- Splash Screen -->
+    <div id="splash">
+        <img src="truck-logo.jpg" alt="Market 32 Truck" class="splash-logo">
+        <div class="splash-title">Market 32 Router</div>
+        <div class="splash-subtitle">Professional Route Planning</div>
+    </div>
+    
+    <!-- Install Prompt -->
+    <div class="install-prompt" id="installPrompt">
+        <div class="install-prompt-content">
+            <div class="install-icon">🚛</div>
+            <div class="install-text">
+                <h3>Install Market 32 Router</h3>
+                <p>Add to home screen for quick access</p>
+            </div>
+        </div>
+        <div class="install-buttons">
+            <button class="install-yes" onclick="installApp()">Install</button>
+            <button class="install-no" onclick="dismissInstall()">Not Now</button>
+        </div>
+    </div>
+    
+    <!-- Full screen map -->
+    <div id="map"></div>
+    
+    <!-- Floating action buttons -->
+    <div class="fab-container">
+        <button class="fab search-toggle" onclick="toggleSearch()">🔍</button>
+        <button class="fab" id="gpsFab" onclick="toggleTracking()">📍</button>
+    </div>
+    
+    <!-- GPS tracking banner -->
+    <div class="tracking-banner" id="trackingBanner"></div>
+    
+    <!-- Floating search card -->
+    <div class="search-card" id="searchCard">
+        <div class="search-header">
+            <div class="app-icon">🚛</div>
+            <div class="app-title">Route Planner</div>
+        </div>
+        
+        <div class="stop-container" id="stopContainer">
+            <div class="stop-row">
+                <div class="stop-label">From</div>
+                <input type="text" id="from" placeholder='DC1 or Store #'>
+            </div>
+            <div class="stop-row">
+                <div class="stop-label">To</div>
+                <input type="text" id="to" placeholder='DC1 or Store #'>
+            </div>
+        </div>
+        
+        <button class="add-stop-btn" onclick="addStop()">+ Add Stop</button>
+        
+        <div class="route-options">
+            <div class="route-option active" onclick="selectRouteType('fastest')">⚡ Fastest</div>
+            <div class="route-option" onclick="selectRouteType('shortest')">📏 Shortest</div>
+        </div>
+        
+        <button class="route-btn" onclick="getRoute()">Get Route</button>
+    </div>
+    
+    <!-- Directions drawer -->
+    <div class="drawer" id="drawer">
+        <div class="drawer-handle" onclick="toggleDrawer()">
+            <div class="drawer-bar"></div>
+            <div class="drawer-summary" id="drawerSummary">Enter destinations to see route</div>
+        </div>
+        <div class="drawer-content" id="drawerContent"></div>
+    </div>
+
+    <script>
+        const DC1 = {name:"DC1 (Distribution Center)",lat:42.784444,lng:-73.999860};
+        
+        const stores = {
+            "DC1":{name:"DC1 (Distribution Center)",lat:42.784444,lng:-73.999860},
+            1:{name:"EASTERN PARKWAY",lat:42.8069222,lng:-73.9144807},
+            3:{name:"BRUNSWICK",lat:42.743397,lng:-73.645708},
+            4:{name:"LINCOLN",lat:44.041337,lng:-71.671618},
+            12:{name:"JOHNSTOWN",lat:43.0157778,lng:-74.3608333},
+            23:{name:"MADISON AVENUE",lat:42.6646785,lng:-73.7902894},
+            24:{name:"WEST CARTHAGE",lat:43.9692772,lng:-75.624279},
+            26:{name:"GENESEE ST",lat:43.0870364,lng:-75.2579385},
+            28:{name:"GUILDERLAND",lat:42.6988056,lng:-73.8944722},
+            29:{name:"POTSDAM",lat:44.6876835,lng:-74.987083},
+            30:{name:"OGDENSBURG",lat:44.705478,lng:-75.4571197},
+            32:{name:"MASSENA",lat:44.9189076,lng:-74.8850837},
+            36:{name:"COHOES",lat:42.7655,lng:-73.7003889},
+            37:{name:"GOUVERNEUR",lat:44.3401079,lng:-75.4547537},
+            38:{name:"GLENVILLE",lat:42.8733056,lng:-73.9300556},
+            39:{name:"WILTON",lat:43.1026944,lng:-73.74375},
+            40:{name:"GLEN STREET",lat:43.3263489,lng:-73.6656529},
+            42:{name:"CATSKILL",lat:42.2143619,lng:-73.8859762},
+            43:{name:"CENTRAL AVE",lat:42.6770525,lng:-73.786411},
+            44:{name:"NORTH UTICA",lat:43.11525,lng:-75.2093333},
+            45:{name:"DELAWARE",lat:42.6506389,lng:-73.7683056},
+            46:{name:"CANTON",lat:44.5971073,lng:-75.1493299},
+            47:{name:"NOTT ST",lat:42.8167222,lng:-73.89225},
+            52:{name:"COLONIE",lat:42.7257222,lng:-73.8424722},
+            54:{name:"NORTH GREENBUSH",lat:42.6536944,lng:-73.69075},
+            94:{name:"MECHANICVILLE",lat:42.9097778,lng:-73.6841111},
+            102:{name:"WATERTOWN",lat:43.9758611,lng:-75.9456389},
+            111:{name:"EAST GREENBUSH",lat:42.6057718,lng:-73.7170648},
+            112:{name:"CLIFTON SHOPPERS WORLD",lat:42.8647778,lng:-73.784},
+            114:{name:"MIDDLETOWN",lat:41.4491667,lng:-74.3828333},
+            116:{name:"COBLESKILL",lat:42.6810278,lng:-74.4700556},
+            122:{name:"WEST RUTLAND",lat:43.5932578,lng:-73.0434122},
+            123:{name:"BARRE",lat:44.2215261,lng:-72.5465072},
+            125:{name:"MANCHESTER",lat:43.1746521,lng:-73.0521324},
+            127:{name:"ST. ALBANS",lat:44.8364385,lng:-73.0806363},
+            129:{name:"POUGHKEEPSIE",lat:41.6669167,lng:-73.93},
+            130:{name:"ENDICOTT",lat:42.104,lng:-76.0526111},
+            131:{name:"RUTLAND",lat:43.6047149,lng:-72.9779522},
+            134:{name:"ONEONTA",lat:42.4627778,lng:-75.0138056},
+            135:{name:"O'NEILL HIGHWAY",lat:41.4357084,lng:-75.6163685},
+            136:{name:"BRATTLEBORO",lat:42.8385956,lng:-72.5654862},
+            137:{name:"MORRISVILLE",lat:44.5737787,lng:-72.590483},
+            138:{name:"LATHAM",lat:42.7542194,lng:-73.7579906},
+            139:{name:"NEW AMSTERDAM",lat:42.9635556,lng:-74.1824444},
+            140:{name:"PITTSFIELD",lat:42.4674717,lng:-73.1948474},
+            141:{name:"ST JOHNSBURY",lat:44.4449873,lng:-72.0155716},
+            142:{name:"VAILS GATE",lat:41.4558611,lng:-74.0588889},
+            148:{name:"PARK AVENUE",lat:42.2705026,lng:-71.8152576},
+            150:{name:"SPENCER",lat:42.2447638,lng:-71.9948465},
+            151:{name:"SUNDERLAND ROAD",lat:42.246833,lng:-71.771616},
+            155:{name:"GREAT BARRINGTON",lat:42.210638,lng:-73.3453217},
+            156:{name:"TORRINGTON",lat:41.8195631,lng:-73.0810342},
+            157:{name:"GRANVILLE",lat:43.3966111,lng:-73.2616111},
+            158:{name:"SARATOGA",lat:43.0732427,lng:-73.792171},
+            159:{name:"SLINGERLANDS",lat:42.6388611,lng:-73.8550278},
+            160:{name:"WORCESTER FAIR",lat:42.2148756,lng:-71.7960476},
+            161:{name:"NORWICH",lat:42.514785,lng:-75.523132},
+            162:{name:"MARLBORO",lat:42.3513273,lng:-71.5352222},
+            164:{name:"PALATINE BRIDGE",lat:42.9152778,lng:-74.5895833},
+            165:{name:"BURLINGTON",lat:44.4497378,lng:-73.2094125},
+            166:{name:"MALONE",lat:44.8457524,lng:-74.3007413},
+            167:{name:"WEST LEBANON",lat:43.6249519,lng:-72.3246342},
+            168:{name:"PLATTSBURGH",lat:44.6961111,lng:-73.4947222},
+            170:{name:"LAKE GEORGE",lat:43.4250556,lng:-73.7146389},
+            171:{name:"BENNINGTON",lat:42.90231,lng:-73.2148832},
+            172:{name:"ERIE BLVD",lat:43.0545556,lng:-76.1036111},
+            173:{name:"WYOMING",lat:41.3008662,lng:-75.8534751},
+            174:{name:"WESTERN LIGHTS",lat:43.0357959,lng:-76.1939909},
+            175:{name:"ALTAMONT AVE",lat:42.7806389,lng:-73.9553056},
+            177:{name:"WINDSOR VT",lat:43.4855794,lng:-72.3852994},
+            178:{name:"CORTLAND",lat:42.5735803,lng:-76.2174324},
+            180:{name:"LAKE PLACID",lat:44.2954444,lng:-74.0105556},
+            181:{name:"HUDSON VALLEY PLAZA",lat:42.6965278,lng:-73.6884167},
+            183:{name:"JOHNSTON RD",lat:42.6875,lng:-73.8602778},
+            184:{name:"MALTA",lat:42.9734444,lng:-73.7921667},
+            185:{name:"MONTROSE",lat:41.8380671,lng:-75.8536914},
+            188:{name:"ALBANY SHAKER RD",lat:42.7072222,lng:-73.8166667},
+            189:{name:"PUTNAM",lat:41.9199915,lng:-71.9074981},
+            190:{name:"EDWARDSVILLE",lat:41.2581874,lng:-75.9019047},
+            191:{name:"NISKAYUNA",lat:42.776694,lng:-73.893313},
+            192:{name:"ESSEX JUNCTION",lat:44.511067,lng:-73.0655807},
+            193:{name:"SAUGERTIES",lat:42.0805556,lng:-73.9935},
+            194:{name:"MOUNTAIN STREET",lat:42.3244986,lng:-71.7976512},
+            196:{name:"GLENMONT",lat:42.6031111,lng:-73.7963889},
+            198:{name:"NEWBURGH",lat:41.5230833,lng:-74.0285556},
+            199:{name:"CICERO",lat:43.1505556,lng:-76.1190556},
+            202:{name:"WESTFALL",lat:41.3619171,lng:-74.7078637},
+            203:{name:"SOUTHINGTON",lat:41.6285096,lng:-72.8739452},
+            204:{name:"BRISTOL",lat:41.6848665,lng:-72.9391474},
+            206:{name:"ROME",lat:43.2297222,lng:-75.4382778},
+            207:{name:"COMMERCIAL DRIVE",lat:43.0852778,lng:-75.0052778},
+            208:{name:"KEENE",lat:42.9262394,lng:-72.305729},
+            209:{name:"NEWINGTON",lat:41.6699241,lng:-72.7220061},
+            210:{name:"RICHFIELD SPRINGS",lat:42.8562778,lng:-74.9972778},
+            213:{name:"ONEIDA",lat:43.0802778,lng:-75.6447222},
+            214:{name:"FULTON",lat:43.3240833,lng:-76.4252778},
+            215:{name:"SIDNEY",lat:42.29775,lng:-75.4123611},
+            216:{name:"OWEGO FAIR",lat:42.09925,lng:-76.2709444},
+            218:{name:"DELHI",lat:42.2665066,lng:-74.9237383},
+            219:{name:"DERBY",lat:44.9529631,lng:-72.1594819},
+            220:{name:"LAKE CHAMPLAIN",lat:44.9796528,lng:-73.4463889},
+            221:{name:"NEW WINDSOR",lat:41.8718869,lng:-72.6603733},
+            222:{name:"NEW WILKES BARRE",lat:41.2398425,lng:-75.8614852},
+            223:{name:"WARWICK",lat:41.55,lng:-74.1886111},
+            225:{name:"COLGATE",lat:42.8435,lng:-75.5522778},
+            226:{name:"OSWEGO",lat:43.4630278,lng:-76.4854444},
+            227:{name:"LEBANON",lat:43.6364629,lng:-72.2881816},
+            228:{name:"SOUTH BURLINGTON",lat:44.4672777,lng:-73.1736797},
+            229:{name:"SHREWSBURY",lat:42.278111,lng:-71.6979139},
+            230:{name:"COLCHESTER",lat:44.5380601,lng:-73.2469523},
+            231:{name:"HOPKINTON",lat:42.210264,lng:-71.5496599},
+            232:{name:"MIDDLETOWN CT",lat:41.5542297,lng:-72.6813737},
+            233:{name:"LENOX",lat:42.4048586,lng:-73.2652584},
+            234:{name:"CHENANGO",lat:42.1687222,lng:-75.8836389},
+            235:{name:"COOPERSTOWN",lat:42.6926111,lng:-74.9344444},
+            236:{name:"MARSHALLS CREEK",lat:41.0501373,lng:-75.1096576},
+            237:{name:"BINGHAMTON",lat:42.10675,lng:-75.9359167},
+            239:{name:"GARDNER",lat:42.5683695,lng:-71.9844949},
+            240:{name:"WEBSTER",lat:42.0606997,lng:-71.8618673},
+            241:{name:"ALEXANDRIA BAY",lat:44.2964167,lng:-74.9682778},
+            242:{name:"LITTLE FALLS",lat:43.0437778,lng:-74.8583611},
+            243:{name:"STORRS",lat:41.8017903,lng:-72.2404544},
+            244:{name:"SUTTON",lat:42.1626673,lng:-71.7354977},
+            245:{name:"WATERVLIET",lat:42.7321667,lng:-73.7043056},
+            246:{name:"CHATHAM",lat:42.3469722,lng:-73.6048611},
+            247:{name:"WARRENSBURG",lat:43.4881944,lng:-73.7594167},
+            248:{name:"OXFORD",lat:41.4211158,lng:-73.1072384},
+            249:{name:"FORT EDWARD",lat:43.2833889,lng:-73.5861389},
+            250:{name:"CLIFTON PARK",lat:42.8684167,lng:-73.8201389}
+        };
+
+        // Initialize map
+        const map = L.map('map').setView([43.0, -74.0], 7);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap'
+        }).addTo(map);
+
+        let routeLine = null;
+        let markers = [];
+        let selectedRouteType = 'fastest';
+        let stopCount = 0;
+        
+        // GPS tracking
+        let isTracking = false;
+        let trackingPoints = [];
+        let trackingPolyline = null;
+        let currentLocationMarker = null;
+        let watchId = null;
+        let tripStartTime = null;
+        
+        // PWA install
+        let deferredPrompt;
+        
+        // Splash screen
+        setTimeout(() => {
+            document.getElementById('splash').classList.add('hidden');
+        }, 1500);
+        
+        // Install prompt
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            setTimeout(() => {
+                if (!localStorage.getItem('installDismissed')) {
+                    document.getElementById('installPrompt').classList.add('show');
+                }
+            }, 3000);
+        });
+        
+        function installApp() {
+            document.getElementById('installPrompt').classList.remove('show');
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                deferredPrompt.userChoice.then((choice) => {
+                    deferredPrompt = null;
+                });
+            }
+        }
+        
+        function dismissInstall() {
+            document.getElementById('installPrompt').classList.remove('show');
+            localStorage.setItem('installDismissed', 'true');
+        }
+        
+        function addStop() {
+            stopCount++;
+            const stopContainer = document.getElementById('stopContainer');
+            const stopRow = document.createElement('div');
+            stopRow.className = 'stop-row';
+            stopRow.innerHTML = `
+                <div class="stop-label">Stop ${stopCount}</div>
+                <input type="text" class="stop-input" placeholder="Store # or DC1">
+                <button class="remove-stop" onclick="removeStop(this)">×</button>
+            `;
+            stopContainer.appendChild(stopRow);
+        }
+        
+        function removeStop(btn) {
+            btn.parentElement.remove();
+            stopCount--;
+            // Renumber stops
+            const stops = document.querySelectorAll('.stop-label');
+            let num = 1;
+            stops.forEach((label, i) => {
+                if (i > 1) { // Skip "From" and "To"
+                    label.textContent = `Stop ${num}`;
+                    num++;
+                }
+            });
+        }
+        
+        function selectRouteType(type) {
+            selectedRouteType = type;
+            document.querySelectorAll('.route-option').forEach(opt => {
+                opt.classList.remove('active');
+            });
+            event.target.classList.add('active');
+        }
+        
+        function toggleSearch() {
+            document.getElementById('searchCard').classList.toggle('minimized');
+        }
+        
+        function toggleDrawer() {
+            document.getElementById('drawer').classList.toggle('expanded');
+        }
+        
+        function toggleTracking() {
+            if (isTracking) {
+                stopTracking();
+            } else {
+                startTracking();
+            }
+        }
+        
+        function startTracking() {
+            if (!navigator.geolocation) {
+                alert('GPS not supported');
+                return;
+            }
+
+            isTracking = true;
+            trackingPoints = [];
+            tripStartTime = Date.now();
+            
+            document.getElementById('gpsFab').classList.add('tracking');
+            document.getElementById('gpsFab').innerHTML = '⏹️';
+            
+            const banner = document.getElementById('trackingBanner');
+            banner.classList.add('active');
+            banner.textContent = '📍 GPS Tracking Active - High Accuracy Mode';
+
+            watchId = navigator.geolocation.watchPosition(
+                (position) => {
+                    const lat = position.coords.latitude;
+                    const lng = position.coords.longitude;
+                    const accuracy = position.coords.accuracy;
+                    const speed = position.coords.speed || 0;
+                    
+                    trackingPoints.push({
+                        lat, lng,
+                        timestamp: Date.now(),
+                        speed: speed * 2.237,
+                        accuracy
+                    });
+
+                    if (currentLocationMarker) map.removeLayer(currentLocationMarker);
+                    
+                    currentLocationMarker = L.circle([lat, lng], {
+                        radius: accuracy,
+                        fillColor: "#4285f4",
+                        color: "#fff",
+                        weight: 3,
+                        opacity: 0.8,
+                        fillOpacity: 0.3
+                    }).addTo(map);
+                    
+                    L.circleMarker([lat, lng], {
+                        radius: 8,
+                        fillColor: "#4285f4",
+                        color: "#fff",
+                        weight: 2,
+                        opacity: 1,
+                        fillOpacity: 1
+                    }).addTo(map);
+
+                    if (trackingPolyline) map.removeLayer(trackingPolyline);
+                    if (trackingPoints.length > 1) {
+                        trackingPolyline = L.polyline(
+                            trackingPoints.map(p => [p.lat, p.lng]),
+                            { color: '#ea4335', weight: 5, opacity: 0.8 }
+                        ).addTo(map);
+                    }
+
+                    const duration = Math.round((Date.now() - tripStartTime) / 60000);
+                    const avgAcc = Math.round(trackingPoints.reduce((s, p) => s + p.accuracy, 0) / trackingPoints.length);
+                    banner.textContent = `📍 GPS Active | ${trackingPoints.length} pts | ${duration} min | ±${avgAcc}m`;
+                    
+                    map.setView([lat, lng], map.getZoom());
+                },
+                (error) => {
+                    banner.textContent = `❌ GPS Error: ${error.message}`;
+                },
+                { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+            );
+        }
+
+        function stopTracking() {
+            if (watchId) navigator.geolocation.clearWatch(watchId);
+            
+            isTracking = false;
+            document.getElementById('gpsFab').classList.remove('tracking');
+            document.getElementById('gpsFab').innerHTML = '📍';
+            
+            const banner = document.getElementById('trackingBanner');
+
+            if (trackingPoints.length < 2) {
+                banner.textContent = '❌ Not enough GPS data';
+                setTimeout(() => banner.classList.remove('active'), 3000);
+                return;
+            }
+
+            const duration = (Date.now() - tripStartTime) / 60000;
+            let totalDist = 0;
+            for (let i = 1; i < trackingPoints.length; i++) {
+                totalDist += calculateDistance(
+                    trackingPoints[i-1].lat, trackingPoints[i-1].lng,
+                    trackingPoints[i].lat, trackingPoints[i].lng
+                );
+            }
+            
+            const avgSpeed = trackingPoints.reduce((s, p) => s + p.speed, 0) / trackingPoints.length;
+            const avgAcc = trackingPoints.reduce((s, p) => s + p.accuracy, 0) / trackingPoints.length;
+
+            banner.textContent = `✅ Trip Saved: ${totalDist.toFixed(1)} mi | ${duration.toFixed(0)} min | ${avgSpeed.toFixed(0)} mph avg`;
+            setTimeout(() => banner.classList.remove('active'), 5000);
+
+            saveTripData({ startTime: tripStartTime, endTime: Date.now(), duration, distance: totalDist, avgSpeed, avgAccuracy: avgAcc, points: trackingPoints });
+        }
+
+        function calculateDistance(lat1, lon1, lat2, lon2) {
+            const R = 3959;
+            const dLat = (lat2 - lat1) * Math.PI / 180;
+            const dLon = (lon2 - lon1) * Math.PI / 180;
+            const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                      Math.sin(dLon/2) * Math.sin(dLon/2);
+            return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+        }
+
+        async function saveTripData(data) {
+            try {
+                // Upload to server
+                const response = await fetch('https://zgraham.duckdns.org/api/trips', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        startTime: data.startTime,
+                        endTime: data.endTime,
+                        duration: data.duration,
+                        distance: data.distance,
+                        avgSpeed: data.avgSpeed,
+                        avgAccuracy: data.avgAccuracy,
+                        points: data.points,
+                        from: 'DC1',
+                        to: 'Store'
+                    })
+                });
+                const result = await response.json();
+                console.log('✅ Saved to server:', result);
+                
+                // Backup to localStorage
+                const trips = JSON.parse(localStorage.getItem('trips') || '[]');
+                trips.push(data);
+                localStorage.setItem('trips', JSON.stringify(trips));
+            } catch (error) {
+                console.error('❌ Error:', error);
+                // Fallback to localStorage only
+                const trips = JSON.parse(localStorage.getItem('trips') || '[]');
+                trips.push(data);
+                localStorage.setItem('trips', JSON.stringify(trips));
+            }
+        }
+
+        async function getRoute() {
+            // Collect all stops
+            const fromInput = document.getElementById('from').value.toString().toUpperCase();
+            const toInput = document.getElementById('to').value.toString().toUpperCase();
+            const stopInputs = Array.from(document.querySelectorAll('.stop-input')).map(i => i.value.toString().toUpperCase());
+            
+            // Build location array
+            const locations = [];
+            
+            // Add from
+            let fromCode = fromInput !== 'DC1' ? Number(fromInput) : fromInput;
+            if (!stores[fromCode]) {
+                alert('Invalid From location');
+                return;
+            }
+            locations.push({lat: stores[fromCode].lat, lon: stores[fromCode].lng});
+            
+            // Add intermediate stops
+            for (let stopInput of stopInputs) {
+                if (!stopInput) continue;
+                let stopCode = stopInput !== 'DC1' ? Number(stopInput) : stopInput;
+                if (!stores[stopCode]) {
+                    alert(`Invalid stop: ${stopInput}`);
+                    return;
+                }
+                locations.push({lat: stores[stopCode].lat, lon: stores[stopCode].lng});
+            }
+            
+            // Add to
+            let toCode = toInput !== 'DC1' ? Number(toInput) : toInput;
+            if (!stores[toCode]) {
+                alert('Invalid To location');
+                return;
+            }
+            locations.push({lat: stores[toCode].lat, lon: stores[toCode].lng});
+            
+            // Force bridge route for Store 175 (ALTAMONT AVE) - Route 7 bridge
+            if (fromCode === 'DC1' && toCode === 175) {
+                // Insert waypoint ON Route 7 east of Hudson River bridge
+                // This forces routing via Cohoes/Route 7 instead of I-90
+                locations.splice(locations.length - 1, 0, {lat: 42.7850, lon: -73.8900});
+            }
+            
+            if (locations.length < 2) {
+                alert('Need at least 2 locations');
+                return;
+            }
+            
+            document.getElementById('drawerSummary').textContent = 'Calculating route...';
+            
+            try {
+                const costingOptions = { truck: { height: 4.0, width: 2.6, weight: 26.0 } };
+                if (selectedRouteType === 'shortest') costingOptions.truck.shortest = true;
+                
+                const params = {
+                    locations,
+                    costing: 'truck',
+                    costing_options: costingOptions,
+                    directions_options: { units: 'miles' }
+                };
+                
+                const url = `https://zgraham.duckdns.org/route?json=${encodeURIComponent(JSON.stringify(params))}`;
+                const response = await fetch(url);
+                const data = await response.json();
+                
+                if (data.trip && data.trip.legs) {
+                    // Clear previous
+                    if (routeLine) map.removeLayer(routeLine);
+                    markers.forEach(m => map.removeLayer(m));
+                    markers = [];
+                    
+                    // Calculate total time
+                    let totalTime = 0;
+                    data.trip.legs.forEach(leg => totalTime += leg.summary.time);
+                    const mins = Math.round(totalTime / 60);
+                    
+                    // Draw route
+                    const allCoords = [];
+                    data.trip.legs.forEach(leg => {
+                        allCoords.push(...decodePolyline(leg.shape));
+                    });
+                    
+                    routeLine = L.polyline(allCoords, {
+                        color: '#4285f4',
+                        weight: 5,
+                        opacity: 0.7
+                    }).addTo(map);
+                    
+                    // Add markers for all stops
+                    const locationNames = [fromCode, ...stopInputs.filter(s=>s).map(s => s !== 'DC1' ? Number(s) : s), toCode];
+                    locationNames.forEach((code, i) => {
+                        const store = stores[code];
+                        const marker = L.marker([store.lat, store.lng])
+                            .bindPopup(`<b>${i === 0 ? 'START' : i === locationNames.length-1 ? 'END' : 'STOP '+i}: ${store.name}</b>`)
+                            .addTo(map);
+                        markers.push(marker);
+                    });
+                    
+                    map.fitBounds(routeLine.getBounds(), {padding: [80, 80]});
+                    
+                    const routeLabel = {'fastest':'⚡ Fastest','shortest':'📏 Shortest'}[selectedRouteType];
+                    document.getElementById('drawerSummary').textContent = `${mins} min • ${routeLabel}`;
+                    
+                    let content = `
+                        <div class="route-summary">
+                            <div class="summary-row">
+                                <span class="summary-label">Route Type:</span>
+                                <span class="summary-value">${routeLabel}</span>
+                            </div>
+                            <div class="summary-row">
+                                <span class="summary-label">From:</span>
+                                <span class="summary-value">${stores[fromCode].name}</span>
+                            </div>`;
+                    
+                    stopInputs.filter(s=>s).forEach((stopInput, i) => {
+                        const stopCode = stopInput !== 'DC1' ? Number(stopInput) : stopInput;
+                        content += `
+                            <div class="summary-row">
+                                <span class="summary-label">Stop ${i+1}:</span>
+                                <span class="summary-value">${stores[stopCode].name}</span>
+                            </div>`;
+                    });
+                    
+                    content += `
+                            <div class="summary-row">
+                                <span class="summary-label">To:</span>
+                                <span class="summary-value">${stores[toCode].name}</span>
+                            </div>
+                            <div class="summary-row">
+                                <span class="summary-label">Total Time:</span>
+                                <span class="summary-value">${mins} minutes</span>
+                            </div>
+                        </div>
+                        <button class="return-btn" onclick="returnToDC1()">← Return to DC1</button>
+                        <div class="directions-list">
+                            <div class="direction-header">Turn-by-Turn Directions</div>`;
+                    
+                    data.trip.legs.forEach((leg, legIndex) => {
+                        if (data.trip.legs.length > 1) {
+                            content += `<div class="direction-header">Leg ${legIndex + 1}</div>`;
+                        }
+                        leg.maneuvers.forEach((m, i) => {
+                            if (i === 0 && (m.instruction.toLowerCase().includes('drive') ||
+                                           m.instruction.toLowerCase().includes('head') ||
+                                           m.instruction.toLowerCase().includes('go')) &&
+                                m.instruction.split(' ').length < 8) {
+                                return;
+                            }
+                            content += `
+                                <div class="direction-step">
+                                    <div class="direction-icon">→</div>
+                                    <div class="direction-text">${m.instruction}</div>
+                                </div>`;
+                        });
+                    });
+                    
+                    content += '</div>';
+                    document.getElementById('drawerContent').innerHTML = content;
+                    document.getElementById('drawer').classList.add('expanded');
+                    
+                    if (window.innerWidth <= 768) {
+                        document.getElementById('searchCard').classList.add('minimized');
+                    }
+                }
+            } catch (error) {
+                alert('Server error: ' + error.message);
+            }
+        }
+        
+        function returnToDC1() {
+            const lastStop = document.querySelectorAll('.stop-input');
+            const lastValue = lastStop.length > 0 ? 
+                lastStop[lastStop.length - 1].value : 
+                document.getElementById('to').value;
+            
+            document.getElementById('from').value = lastValue;
+            document.getElementById('to').value = 'DC1';
+            
+            // Clear intermediate stops
+            document.querySelectorAll('.stop-input').forEach(input => input.parentElement.remove());
+            stopCount = 0;
+            
+            setTimeout(() => getRoute(), 100);
+        }
+        
+        function decodePolyline(str, precision = 6) {
+            let index = 0, lat = 0, lng = 0;
+            const coordinates = [];
+            const factor = Math.pow(10, precision);
+
+            while (index < str.length) {
+                let byte, shift = 0, result = 0;
+                do {
+                    byte = str.charCodeAt(index++) - 63;
+                    result |= (byte & 0x1f) << shift;
+                    shift += 5;
+                } while (byte >= 0x20);
+                lat += ((result & 1) ? ~(result >> 1) : (result >> 1));
+
+                shift = result = 0;
+                do {
+                    byte = str.charCodeAt(index++) - 63;
+                    result |= (byte & 0x1f) << shift;
+                    shift += 5;
+                } while (byte >= 0x20);
+                lng += ((result & 1) ? ~(result >> 1) : (result >> 1));
+
+                coordinates.push([lat / factor, lng / factor]);
+            }
+            return coordinates;
+        }
+        
+        // PWA Service Worker
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js');
+            });
+        }
+    </script>
+</body>
+</html>
