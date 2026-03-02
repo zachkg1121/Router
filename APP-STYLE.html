@@ -919,16 +919,32 @@
             return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
         }
 
-        function saveTripData(data) {
-            try {
-                const trips = JSON.parse(localStorage.getItem('trips') || '[]');
-                trips.push(data);
-                localStorage.setItem('trips', JSON.stringify(trips));
-            } catch (e) {
-                console.error('Save error:', e);
-            }
-        }
-
+      async function saveTripData(data) {
+    try {
+        const response = await fetch('https://zgraham.duckdns.org/api/trips', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                startTime: data.startTime,
+                endTime: data.endTime,
+                duration: data.duration,
+                distance: data.distance,
+                avgSpeed: data.avgSpeed,
+                avgAccuracy: data.avgAccuracy,
+                points: data.points,
+                from: 'DC1',
+                to: 'Store'
+            })
+        });
+        const result = await response.json();
+        console.log('✅ Saved to server:', result);
+    } catch (error) {
+        console.error('❌ Error:', error);
+        const trips = JSON.parse(localStorage.getItem('trips') || '[]');
+        trips.push(data);
+        localStorage.setItem('trips', JSON.stringify(trips));
+    }
+}
         async function getRoute() {
             // Collect all stops
             const fromInput = document.getElementById('from').value.toString().toUpperCase();
