@@ -1,0 +1,156 @@
+# Phase 2 GPS Logging Setup Guide
+
+## What's New
+
+Your PWA now logs GPS data while drivers navigate routes! This data will be used to learn actual driving patterns and optimize future routes.
+
+## Files to Upload
+
+1. **router.html** - Updated PWA with GPS logging
+2. **gps-server.js** - Backend server to receive GPS data
+
+## Installation Steps
+
+### 1. Upload Updated PWA
+
+```bash
+# SSH into your DigitalOcean server
+ssh user@zgraham.duckdns.org
+
+# Upload the new router.html (replace existing one)
+# The file should go wherever your current router.html is located
+```
+
+### 2. Install GPS Logging Server
+
+```bash
+# Upload gps-server.js to your server
+# Install it in a new directory, like /home/user/gps-logging/
+
+# Install Node.js if not already installed
+sudo apt update
+sudo apt install nodejs npm -y
+
+# Navigate to the GPS logging directory
+cd /home/user/gps-logging
+
+# Install PM2 to keep it running
+sudo npm install -g pm2
+
+# Start the GPS logging server
+pm2 start gps-server.js --name gps-logger
+
+# Make it auto-start on reboot
+pm2 startup
+pm2 save
+```
+
+### 3. Update Nginx (if needed)
+
+Add a proxy pass for the GPS endpoint:
+
+```nginx
+location /save-gps {
+    proxy_pass http://localhost:3001/save-gps;
+    proxy_http_version 1.1;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection 'upgrade';
+    proxy_set_header Host $host;
+    proxy_cache_bypass $http_upgrade;
+}
+
+location /list-trips {
+    proxy_pass http://localhost:3001/list-trips;
+}
+```
+
+Then reload Nginx:
+```bash
+sudo nginx -t
+sudo systemctl reload nginx
+```
+
+## How It Works
+
+### For Drivers:
+
+1. Open the PWA and plan a route (e.g., DC1 → Store 175)
+2. Click "Get Route" - GPS logging starts automatically
+3. Turn on GPS tracking (📍 button) and drive the route
+4. When you arrive, click "✓ Complete Trip & Save GPS" button
+5. GPS data is automatically sent to the server
+
+### What Gets Logged:
+
+- Route details (from/to/stops)
+- GPS coordinates every 30 seconds
+- Timestamps for each point
+- Trip start and end times
+
+### Data Storage:
+
+GPS logs are saved to: `/home/user/gps-logs/`
+
+Each trip creates a JSON file like:
+```
+trip_DC1-to-175_2026-03-02T14-30-00.json
+```
+
+## Viewing GPS Data
+
+Check saved trips:
+```bash
+curl http://localhost:3001/list-trips
+```
+
+View a specific trip:
+```bash
+cat /home/user/gps-logs/trip_DC1-to-175_*.json
+```
+
+## Next Steps (Phase 2 Continued)
+
+Once you have GPS data from several trips:
+
+1. **Analyze patterns** - Compare actual routes vs planned routes
+2. **Build route database** - Store "learned" routes for common trips
+3. **Update routing logic** - Prefer actual driven routes over Google's suggestions
+4. **Add analytics dashboard** - View all trips, find problem routes
+
+## Backup Plan
+
+If the server endpoint isn't working, GPS data is automatically saved to the browser's localStorage as a backup. You can extract it later from the browser console:
+
+```javascript
+console.log(localStorage.getItem('gpsTrips'));
+```
+
+## Troubleshooting
+
+**GPS logging not starting?**
+- Check browser console for errors
+- Make sure GPS tracking (📍) is enabled
+- Verify the route was calculated successfully
+
+**Data not saving to server?**
+- Check if gps-server.js is running: `pm2 status`
+- Check server logs: `pm2 logs gps-logger`
+- Verify Nginx proxy is configured correctly
+
+**No GPS points being logged?**
+- GPS tracking must be ON (📍 button red)
+- Driver must wait 30 seconds for first point
+- Browser must have location permissions
+
+## Testing
+
+Quick test without driving:
+
+1. Plan a route (DC1 → 175)
+2. Click "Get Route"
+3. Enable GPS tracking
+4. Wait 1-2 minutes
+5. Click "Complete Trip & Save GPS"
+6. Check if file was created in /home/user/gps-logs/
+
+You should see at least 2-4 GPS points logged!
